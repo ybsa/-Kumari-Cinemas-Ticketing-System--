@@ -1,0 +1,65 @@
+@model IEnumerable<KumariCinemas.Web.Models.Booking>
+
+@{
+    ViewData["Title"] = "My Bookings";
+}
+
+<div class="booking-container">
+    <header class="page-header">
+        <h1>My Bookings</h1>
+    </header>
+
+    <div class="bookings-list">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <p>You have no bookings yet.</p>
+                <a asp-controller="Ticket" asp-action="Index" class="btn-primary">Browse Movies</a>
+            </div>
+        }
+        else
+        {
+            @foreach (var booking in Model)
+            {
+                <div class="booking-item">
+                    <div class="info">
+                        <h3>Booking #@booking.BookingId</h3>
+                        <p class="status @booking.Status.ToLower()">@booking.Status</p>
+                    </div>
+                    <div class="price">
+                        <span class="qty-badge">@booking.TotalTickets Tickets</span>
+                        <span>Total Price</span>
+                        <strong>Rs. @booking.FinalPrice</strong>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    .booking-container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+    .booking-item {
+        background: rgba(255, 255, 255, 0.05);
+        margin-bottom: 15px;
+        padding: 20px;
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .status { font-weight: 700; text-transform: uppercase; font-size: 0.8rem; }
+    .status.booked { color: #f1c40f; }
+    .status.paid { color: #2ecc71; }
+    .status.cancelled { color: #e74c3c; }
+    .price { text-align: right; }
+    .price span { display: block; color: #b3b3b3; font-size: 0.8rem; }
+    .qty-badge { 
+        background: rgba(255, 255, 255, 0.1); 
+        padding: 2px 8px; 
+        border-radius: 4px; 
+        margin-bottom: 5px; 
+        display: inline-block !important; 
+    }
+</style>

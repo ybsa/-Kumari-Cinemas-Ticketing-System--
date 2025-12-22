@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>Welcome Back</h2>
+        <form asp-action="Login" method="post">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" class="form-control" placeholder="Enter your username" required />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Enter your password" required />
+            </div>
+            <button type="submit" class="btn-primary">Sign In</button>
+        </form>
+        <p class="auth-footer">Don't have an account? <a asp-action="Register">Register here</a></p>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+    }
+    .auth-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 40px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        max-width: 400px;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        background: rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        border-radius: 8px;
+    }
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+        background: #e50914;
+        border: none;
+        color: white;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .auth-footer { text-align: center; margin-top: 20px; color: #b3b3b3; }
+    .auth-footer a { color: #e50914; text-decoration: none; }
+</style>

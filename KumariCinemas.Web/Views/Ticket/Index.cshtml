@@ -1,0 +1,194 @@
+@model IEnumerable<KumariCinemas.Web.Models.Show>
+
+@{
+    ViewData["Title"] = "Available Shows";
+}
+
+<div class="booking-container">
+    <header class="page-header">
+        <h1>Kumari Cinemas</h1>
+        <p>Experience movies like never before</p>
+    </header>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <div class="shows-grid">
+        @foreach (var show in Model)
+        {
+            <div class="show-card">
+                <div class="show-info">
+                    <span class="genre-tag">@show.Movie.Genre</span>
+                    <h3>@show.Movie.Title</h3>
+                    <p class="show-time">
+                        <i class="time-icon"></i> @show.StartTime
+                    </p>
+                    <p class="show-date">@show.ShowDate.ToString("MMMM dd, yyyy")</p>
+                </div>
+                <div class="price-section">
+                    <span class="price-label">Price</span>
+                    <span class="price-value">Rs. @show.CalculatedPrice</span>
+                </div>
+                <form asp-action="Book" method="post" class="booking-form">
+                    <input type="hidden" name="showId" value="@show.ShowId" />
+                    <input type="hidden" name="unitPrice" value="@show.CalculatedPrice" class="unit-price" />
+                    <input type="hidden" name="finalPrice" value="@show.CalculatedPrice" class="total-price-hidden" />
+                    <input type="hidden" name="userId" value="1" /> @* Mocking logged in user *@
+                    
+                    <div class="qty-control">
+                        <label>Tickets:</label>
+                        <input type="number" name="quantity" value="1" min="1" max="10" class="ticket-qty" onchange="updatePrice(this)" />
+                    </div>
+
+                    <button type="submit" class="btn-book">Book Now (Rs. <span class="display-price">@show.CalculatedPrice</span>)</button>
+                </form>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary: #e50914;
+        --bg-dark: #0a0a0b;
+        --card-bg: rgba(255, 255, 255, 0.05);
+        --text: #ffffff;
+        --text-secondary: #b3b3b3;
+    }
+
+    body {
+        background-color: var(--bg-dark);
+        color: var(--text);
+        font-family: 'Outfit', sans-serif;
+    }
+
+    .booking-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .alert-danger {
+        background: rgba(229, 9, 20, 0.2);
+        color: #ff6b6b;
+        border: 1px solid #e50914;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .page-header h1 {
+        font-size: 3.5rem;
+        background: linear-gradient(to right, #ffffff, #808080);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+
+    .shows-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 30px;
+    }
+
+    .show-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 30px;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .show-card:hover {
+        transform: translateY(-10px);
+        border-color: var(--primary);
+    }
+
+    .genre-tag {
+        background: rgba(229, 9, 20, 0.2);
+        color: var(--primary);
+        padding: 5px 12px;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .show-card h3 {
+        margin: 15px 0;
+        font-size: 1.5rem;
+    }
+
+    .show-time, .show-date {
+        color: var(--text-secondary);
+        margin: 5px 0;
+    }
+
+    .price-section {
+        margin: 25px 0;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .price-label { color: var(--text-secondary); }
+    .price-value { font-size: 1.4rem; font-weight: 700; color: var(--primary); }
+
+    .btn-book {
+        width: 100%;
+        padding: 15px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+    }
+
+    .btn-book:hover {
+        opacity: 0.9;
+    }
+
+    .qty-control {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+    }
+
+    .ticket-qty {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 8px;
+        border-radius: 8px;
+        width: 60px;
+    }
+</style>
+
+<script>
+    function updatePrice(input) {
+        const form = input.closest('form');
+        const unitPrice = parseFloat(form.querySelector('.unit-price').value);
+        const qty = parseInt(input.value);
+        const totalPrice = unitPrice * qty;
+        
+        form.querySelector('.total-price-hidden').value = totalPrice.toFixed(2);
+        form.querySelector('.display-price').innerText = totalPrice.toFixed(2);
+    }
+</script>
