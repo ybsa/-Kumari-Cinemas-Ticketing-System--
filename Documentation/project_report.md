@@ -35,7 +35,13 @@ Per the requirement, a background service (`BookingCleanupService`) monitors the
 
 To prevent overbooking, the system implements a real-time capacity check. Before any booking is confirmed, the system queries the **M_Halls** capacity and compares it against the existing **TotalTickets** for that specific show. If the hall is full, the transaction is rejected, ensuring physical constraints are respected.
 
-### 3.3 UI/UX Design
+**Precision Timing**: To support the "1-hour cancellation" rule with absolute accuracy, the database uses **`TIMESTAMP`** data types for `ShowDateTime` instead of simple date/string combinations. This eliminates ambiguity in timezone or format conversions.
+
+### 3.4 Security Implementation
+
+To address critical security vulnerabilities, the system implements industrial-strength password hashing. Passwords are never stored in plain text. Instead, **PBKDF2 (Password-Based Key Derivation Function 2)** with 100,000 iterations is used to hash user credentials before storage, protecting user data against database breaches.
+
+### 3.5 UI/UX Design
 
 The web frontend was built using ASP.NET Core MVC with a focus on modern design principles:
 

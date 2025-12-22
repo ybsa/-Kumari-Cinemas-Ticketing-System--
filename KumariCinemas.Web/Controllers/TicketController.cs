@@ -26,7 +26,8 @@ namespace KumariCinemas.Web.Controllers
             {
                 await connection.OpenAsync();
                 string sql = @"
-                    SELECT s.*, m.Title, m.ReleaseDate, m.Genre 
+                    SELECT s.ShowId, s.MovieId, s.HallId, s.ShowDateTime, s.BasePrice, 
+                           m.Title, m.ReleaseDate, m.Genre 
                     FROM M_Shows s 
                     JOIN M_Movies m ON s.MovieId = m.MovieId";
 
@@ -39,19 +40,20 @@ namespace KumariCinemas.Web.Controllers
                         {
                             ShowId = reader.GetInt32(0),
                             MovieId = reader.GetInt32(1),
-                            ShowDate = reader.GetDateTime(3),
-                            StartTime = reader.GetString(4),
-                            BasePrice = reader.GetDecimal(5),
+                            HallId = reader.GetInt32(2),
+                            ShowDateTime = reader.GetDateTime(3),
+                            BasePrice = reader.GetDecimal(4),
                             Movie = new Movie 
                             { 
-                                Title = reader.GetString(6),
-                                ReleaseDate = reader.GetDateTime(7)
+                                Title = reader.GetString(5),
+                                ReleaseDate = reader.GetDateTime(6),
+                                Genre = reader.GetString(7)
                             }
                         };
 
                         // Calculate dynamic price
                         bool isNewRelease = (show.Movie.ReleaseDate >= DateTime.Now.AddDays(-7));
-                        show.CalculatedPrice = _pricingService.CalculatePrice(show.BasePrice, show.ShowDate, isNewRelease);
+                        show.CalculatedPrice = _pricingService.CalculatePrice(show.BasePrice, show.ShowDateTime, isNewRelease);
                         
                         shows.Add(show);
                     }
@@ -126,7 +128,8 @@ namespace KumariCinemas.Web.Controllers
             {
                 await connection.OpenAsync();
                 string sql = @"
-                    SELECT b.*, s.StartTime, m.Title 
+                    SELECT b.BookingId, b.UserId, b.ShowId, b.BookingTime, b.Status, b.FinalPrice, b.TotalTickets,
+                           s.ShowDateTime, m.Title 
                     FROM T_Bookings b
                     JOIN M_Shows s ON b.ShowId = s.ShowId
                     JOIN M_Movies m ON s.MovieId = m.MovieId
@@ -139,13 +142,16 @@ namespace KumariCinemas.Web.Controllers
                     {
                         while (await reader.ReadAsync())
                         {
+                            // Logic placeholder for MyBookings display (can be enhanced to show date)
                             bookings.Add(new Booking
                             {
                                 BookingId = reader.GetInt32(0),
                                 BookingTime = reader.GetDateTime(3),
                                 Status = reader.GetString(4),
                                 FinalPrice = reader.GetDecimal(5),
-                                TotalTickets = reader.IsDBNull(6) ? 1 : reader.GetInt32(6)
+                                TotalTickets = reader.GetInt32(6),
+                                ShowDateTime = reader.GetDateTime(7),
+                                MovieTitle = reader.GetString(8)
                             });
                         }
                     }

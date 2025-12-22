@@ -52,7 +52,7 @@ namespace KumariCinemas.Web.Services
                     AND EXISTS (
                         SELECT 1 FROM M_Shows s 
                         WHERE s.ShowId = b.ShowId 
-                        AND s.ShowDate < (SYSDATE + 1/24) -- Date part check
+                        AND s.ShowDateTime < (SYSDATE + 1/24) -- Cancel 1 hr before show
                     )";
 
                 using (var command = new OracleCommand(sql, connection))

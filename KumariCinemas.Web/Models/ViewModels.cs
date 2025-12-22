@@ -16,8 +16,7 @@ namespace KumariCinemas.Web.Models
         public int ShowId { get; set; }
         public int MovieId { get; set; }
         public int HallId { get; set; }
-        public DateTime ShowDate { get; set; }
-        public string StartTime { get; set; }
+        public DateTime ShowDateTime { get; set; }
         public decimal BasePrice { get; set; }
         
         // Navigation properties/Helper properties
@@ -34,5 +33,9 @@ namespace KumariCinemas.Web.Models
         public string Status { get; set; }
         public decimal FinalPrice { get; set; }
         public int TotalTickets { get; set; }
+
+        // Helper properties for display
+        public string MovieTitle { get; set; }
+        public DateTime ShowDateTime { get; set; }
     }
 }

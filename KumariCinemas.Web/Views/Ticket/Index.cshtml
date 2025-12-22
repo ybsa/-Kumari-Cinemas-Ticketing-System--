@@ -22,12 +22,12 @@
         {
             <div class="show-card">
                 <div class="show-info">
-                    <span class="genre-tag">@show.Movie.Genre</span>
                     <h3>@show.Movie.Title</h3>
-                    <p class="show-time">
-                        <i class="time-icon"></i> @show.StartTime
-                    </p>
-                    <p class="show-date">@show.ShowDate.ToString("MMMM dd, yyyy")</p>
+                    <p>@show.Movie.Genre</p>
+                    <div class="show-time">
+                        <span class="badge bg-primary">@show.ShowDateTime.ToString("MMM dd")</span>
+                        <span class="badge bg-secondary">@show.ShowDateTime.ToString("hh:mm tt")</span>
+                    </div>
                 </div>
                 <div class="price-section">
                     <span class="price-label">Price</span>
@@ -46,6 +46,23 @@
 
                     <button type="submit" class="btn-book">Book Now (Rs. <span class="display-price">@show.CalculatedPrice</span>)</button>
                 </form>
+
+                <div class="review-section">
+                    <h4>Rate this Movie</h4>
+                    <form asp-controller="Review" asp-action="Add" method="post">
+                        <input type="hidden" name="movieId" value="@show.MovieId" />
+                        <input type="hidden" name="userId" value="1" /> @* Mock user *@
+                        <select name="rating" class="form-control" style="margin-bottom: 5px;">
+                            <option value="5">★★★★★ (5/5)</option>
+                            <option value="4">★★★★☆ (4/5)</option>
+                            <option value="3">★★★☆☆ (3/5)</option>
+                            <option value="2">★★☆☆☆ (2/5)</option>
+                            <option value="1">★☆☆☆☆ (1/5)</option>
+                        </select>
+                        <textarea name="comment" class="form-control" placeholder="Write a review..." rows="2"></textarea>
+                        <button type="submit" class="btn-review">Submit Review</button>
+                    </form>
+                </div>
             </div>
         }
     </div>
@@ -178,6 +195,36 @@
         padding: 8px;
         border-radius: 8px;
         width: 60px;
+    }
+
+    .review-section {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .review-section h4 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+        color: #b3b3b3;
+    }
+
+    .btn-review {
+        width: 100%;
+        padding: 8px;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 10px;
+    }
+
+    .btn-review:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: white;
     }
 </style>
 

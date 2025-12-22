@@ -15,14 +15,14 @@ INSERT INTO M_Halls (BranchId, HallName, Capacity) VALUES (2, 'Hall 1', 182);
 INSERT INTO M_Halls (BranchId, HallName, Capacity) VALUES (3, 'Hall 1', 200);
 
 -- Insert Shows (Sample Morning Shows)
-INSERT INTO M_Shows (MovieId, HallId, ShowDate, StartTime, BasePrice) 
-VALUES (1, 1, TO_DATE('2025-12-21', 'YYYY-MM-DD'), 'Morning', 390);
+INSERT INTO M_Shows (MovieId, HallId, ShowDateTime, BasePrice) 
+VALUES (1, 1, TO_TIMESTAMP('2025-12-21 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), 390);
 
-INSERT INTO M_Shows (MovieId, HallId, ShowDate, StartTime, BasePrice) 
-VALUES (1, 2, TO_DATE('2025-12-21', 'YYYY-MM-DD'), 'Morning', 420);
+INSERT INTO M_Shows (MovieId, HallId, ShowDateTime, BasePrice) 
+VALUES (1, 2, TO_TIMESTAMP('2025-12-21 13:00:00', 'YYYY-MM-DD HH24:MI:SS'), 420);
 
-INSERT INTO M_Shows (MovieId, HallId, ShowDate, StartTime, BasePrice) 
-VALUES (1, 3, TO_DATE('2025-12-21', 'YYYY-MM-DD'), 'Morning', 200);
+INSERT INTO M_Shows (MovieId, HallId, ShowDateTime, BasePrice) 
+VALUES (1, 3, TO_TIMESTAMP('2025-12-21 18:00:00', 'YYYY-MM-DD HH24:MI:SS'), 200);
 
 -- Insert Sample User
 INSERT INTO M_Users (Username, Password, Address) 

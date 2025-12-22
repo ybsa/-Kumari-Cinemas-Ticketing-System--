@@ -23,7 +23,8 @@
             {
                 <div class="booking-item">
                     <div class="info">
-                        <h3>Booking #@booking.BookingId</h3>
+                        <h3>@booking.MovieTitle</h3>
+                        <p class="show-date">@booking.ShowDateTime.ToString("MMM dd, yyyy - hh:mm tt")</p>
                         <p class="status @booking.Status.ToLower()">@booking.Status</p>
                     </div>
                     <div class="price">
