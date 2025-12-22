@@ -58,6 +58,14 @@ This document provides the exact steps to set up, run, and present your movie ti
 >
 > "Technically, the backend is fully normalized to **3rd Normal Form (3NF)**. This means branches, halls, and showtimes are stored efficiently to prevent data errors and allow for easy scaling."
 
+### 5. Advanced Validation (The 'A+' Features)
+
+*Demonstrate these to show you went above and beyond:*
+
+- **Real Login**: "I will log in using the sample user 'Pratibha Gurung' (Password: 'password123'). This is a real database check, not a hardcoded stub."
+- **Capacity Check**: "Watch what happens if I try to book 400 tickets for 'Hall 1' which only holds 326 people. The system performs a real-time check and rejects the transaction with a clear error message."
+- **Multiple Tickets**: "I can also book multiple tickets for my family in one go, and the price updates instantly."
+
 ---
 
 ## Part 4: Troubleshooting
