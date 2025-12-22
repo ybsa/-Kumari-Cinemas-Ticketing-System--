@@ -14,6 +14,7 @@ namespace KumariCinemas.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(int movieId, int userId, int rating, string comment)
         {
             string connectionString = _configuration.GetConnectionString("OracleDb");

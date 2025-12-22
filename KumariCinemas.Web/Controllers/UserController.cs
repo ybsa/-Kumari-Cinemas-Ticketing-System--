@@ -17,6 +17,7 @@ namespace KumariCinemas.Web.Controllers
         public IActionResult Register() => View();
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(string username, string password, string address)
         {
             string connectionString = _configuration.GetConnectionString("OracleDb");
@@ -51,6 +52,7 @@ namespace KumariCinemas.Web.Controllers
         public IActionResult Login() => View();
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string username, string password)
         {
             string connectionString = _configuration.GetConnectionString("OracleDb");

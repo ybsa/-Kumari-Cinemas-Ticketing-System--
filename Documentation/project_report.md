@@ -33,7 +33,6 @@ The system uses a relational model designed in **Oracle SQL Developer Data Model
 ### 3.1 Dynamic Pricing (Business Logic Layer)
 
 The pricing strategy is implemented in the application layer (`PricingService.cs`) rather than the database to maintain flexibility.
-
 - **Base Price**: Fetched from the `M_Shows` table.
 - **Rules Engine**:
     1. **New Releases**: If `ReleaseDate` is within 7 days, a **20% premium** is applied.
@@ -49,6 +48,9 @@ To address the "1-hour rule" requirement, the system uses an ASP.NET Core `IHost
 3. **Action**: Any booking with `Status = 'BOOKED'` (unpaid) found to be for a show starting in less than 1 hour is implicitly updated to `'CANCELLED'`.
 4. **Result**: Seats are immediately freed up for new customers without manual intervention.
 
+**Edge Case Handling (Server Time Authority)**:
+The system strictly uses **Server Time** for all calculations, not the client/user device time. This prevents manipulation where a user might change their system clock to bypass the "1-hour rule" (e.g., booking at 59 minutes before the show).
+
 ### 3.3 Data Integrity & Validation
 
 To prevent overbooking, the system implements a real-time capacity check. Before any booking is confirmed, the system queries the **M_Halls** capacity and compares it against the existing **TotalTickets** for that specific show. If the hall is full, the transaction is rejected, ensuring physical constraints are respected.
@@ -57,7 +59,11 @@ To prevent overbooking, the system implements a real-time capacity check. Before
 
 ### 3.4 Security Implementation
 
-To address critical security vulnerabilities, the system implements industrial-strength password hashing. Passwords are never stored in plain text. Instead, **PBKDF2 (Password-Based Key Derivation Function 2)** with 100,000 iterations is used to hash user credentials before storage, protecting user data against database breaches.
+The system adopts a "security-first" mindset for key data:
+
+1. **SQL Injection Defense**: All database interactions use **Parameterized Queries** (e.g., `:userId`, `:showId` placeholders in OracleCommand). This prevents attackers from injecting malicious SQL code.
+2. **Password Security**: Passwords are hashed using **PBKDF2 (SHA256)** with 100,000 iterations. Plain text storage is strictly avoided.
+3. **Authorization**: Access to booking features is restricted to authenticated users (Session Management).
 
 ### 3.5 UI/UX Design
 
@@ -79,12 +85,20 @@ The user journey is designed to be linear and intuitive:
 
 ## 4. Limitations & Future Improvements
 
-While the current system functionality is robust, the following enhancements are identified for future iterations:
+While the current system functionality is robust given the prototype scope, the following constraints are acknowledged:
 
-1. **Payment Gateway Integration**: Integrating eSewa/Khalti for real-time payments instead of the current 'Pay Later' simulation.
-2. **Interactive Seat Map**: Replacing the 'Quantity' input with a visual seat picker where users can click specific seats (e.g., A1, A2).
-3. **Admin Dashboard**: A web-based interface for managers to add movies and schedule shows without using SQL scripts.
-4. **Mobile Application**: Developing a React Native companion app for booking on the go.
+### 4.1 Known Limitations
+
+1. **Payment Processing**: For this prototype, **payment is simulated** and assumed successful. Real-time gateway integration (eSewa/Khalti) is out of scope.
+2. **Notification System**: The system does not currently send SMS or Email confirmations upon booking or cancellation.
+3. **Concurrency (Seat Locking)**: In a high-traffic production environment, two users might try to book the last seat simultaneously. A "Seat Locking" mechanism (holding a seat for 5 mins while paying) would be required to prevent race conditions.
+4. **Refund Automation**: Cancelled tickets do not automatically trigger a refund process in this version.
+
+### 4.2 Future Road Map
+
+1. **Interactive Seat Map**: Replacing the 'Quantity' input with a visual seat picker.
+2. **Admin Dashboard**: A web-based interface for managers to add movies/shows.
+3. **Mobile Application**: React Native companion app.
 
 ## 5. Conclusion
 

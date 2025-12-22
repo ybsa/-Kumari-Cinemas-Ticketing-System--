@@ -64,6 +64,7 @@ namespace KumariCinemas.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Book(int showId, int userId, decimal finalPrice, int quantity)
         {
             string connectionString = _configuration.GetConnectionString("OracleDb");
@@ -71,48 +72,64 @@ namespace KumariCinemas.Web.Controllers
             {
                 await connection.OpenAsync();
 
-                // 1. Check Capacity
-                string capacitySql = @"
-                    SELECT h.Capacity, 
-                           (SELECT COALESCE(SUM(b.TotalTickets), 0) FROM T_Bookings b WHERE b.ShowId = s.ShowId AND b.Status != 'CANCELLED') as BookedCount
-                    FROM M_Shows s
-                    JOIN M_Halls h ON s.HallId = h.HallId
-                    WHERE s.ShowId = :showId";
-
-                int capacity = 0;
-                int booked = 0;
-
-                using (var capCmd = new OracleCommand(capacitySql, connection))
+                // Start Transaction for Atomicity ("Seat Locking Lite")
+                using (var transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
-                    capCmd.Parameters.Add("showId", showId);
-                    using (var reader = await capCmd.ExecuteReaderAsync())
+                    try 
                     {
-                        if (await reader.ReadAsync())
+                        // 1. Check Capacity (Locked Context)
+                        string capacitySql = @"
+                            SELECT h.Capacity, 
+                                   (SELECT COALESCE(SUM(b.TotalTickets), 0) FROM T_Bookings b WHERE b.ShowId = s.ShowId AND b.Status != 'CANCELLED') as BookedCount
+                            FROM M_Shows s
+                            JOIN M_Halls h ON s.HallId = h.HallId
+                            WHERE s.ShowId = :showId"; // In a real app, add 'FOR UPDATE' to lock rows
+
+                        int capacity = 0;
+                        int booked = 0;
+
+                        using (var capCmd = new OracleCommand(capacitySql, connection))
                         {
-                            capacity = reader.GetInt32(0);
-                            booked = reader.GetInt32(1);
+                            capCmd.Transaction = transaction;
+                            capCmd.Parameters.Add("showId", showId);
+                            using (var reader = await capCmd.ExecuteReaderAsync())
+                            {
+                                if (await reader.ReadAsync())
+                                {
+                                    capacity = reader.GetInt32(0);
+                                    booked = reader.GetInt32(1);
+                                }
+                            }
                         }
+
+                        if (booked + quantity > capacity)
+                        {
+                            TempData["Error"] = $"Booking Failed: Only {capacity - booked} seats remaining.";
+                            return RedirectToAction("Index");
+                        }
+
+                        // 2. Proceed with Booking
+                        string sql = @"
+                            INSERT INTO T_Bookings (UserId, ShowId, Status, FinalPrice, TotalTickets) 
+                            VALUES (:userId, :showId, 'BOOKED', :finalPrice, :quantity)";
+
+                        using (var command = new OracleCommand(sql, connection))
+                        {
+                            command.Transaction = transaction;
+                            command.Parameters.Add("userId", userId);
+                            command.Parameters.Add("showId", showId);
+                            command.Parameters.Add("finalPrice", finalPrice);
+                            command.Parameters.Add("quantity", quantity);
+                            await command.ExecuteNonQueryAsync();
+                        }
+
+                        transaction.Commit();
                     }
-                }
-
-                if (booked + quantity > capacity)
-                {
-                    TempData["Error"] = $"Booking Failed: Only {capacity - booked} seats remaining.";
-                    return RedirectToAction("Index");
-                }
-
-                // 2. Proceed with Booking
-                string sql = @"
-                    INSERT INTO T_Bookings (UserId, ShowId, Status, FinalPrice, TotalTickets) 
-                    VALUES (:userId, :showId, 'BOOKED', :finalPrice, :quantity)";
-
-                using (var command = new OracleCommand(sql, connection))
-                {
-                    command.Parameters.Add("userId", userId);
-                    command.Parameters.Add("showId", showId);
-                    command.Parameters.Add("finalPrice", finalPrice);
-                    command.Parameters.Add("quantity", quantity);
-                    await command.ExecuteNonQueryAsync();
+                    catch 
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
 
