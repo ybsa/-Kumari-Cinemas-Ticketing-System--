@@ -1,0 +1,124 @@
+@model Dictionary<string, int>
+
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>🔐 Admin Dashboard</h1>
+        <p>Manage your cinema system</p>
+    </header>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">@Model["TotalUsers"]</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🎬</div>
+            <div class="stat-value">@Model["TotalMovies"]</div>
+            <div class="stat-label">Movies</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🎟️</div>
+            <div class="stat-value">@Model["TotalBookings"]</div>
+            <div class="stat-label">Bookings</div>
+        </div>
+        <div class="stat-card revenue">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value">Rs. @Model["TotalRevenue"]</div>
+            <div class="stat-label">Total Revenue</div>
+        </div>
+    </div>
+
+    <div class="admin-nav">
+        <a asp-action="Movies" class="admin-btn">🎬 Manage Movies</a>
+        <a asp-action="Bookings" class="admin-btn">🎟️ View All Bookings</a>
+        <a asp-controller="Ticket" asp-action="Index" class="admin-btn secondary">← Back to Site</a>
+    </div>
+</div>
+
+<style>
+    .admin-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    .admin-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .admin-header h1 {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, #e50914, #ff6b6b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 25px;
+        text-align: center;
+    }
+
+    .stat-card.revenue {
+        border-color: #2ecc71;
+        background: rgba(46, 204, 113, 0.1);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+    }
+
+    .stat-label {
+        color: #888;
+        margin-top: 5px;
+    }
+
+    .admin-nav {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .admin-btn {
+        padding: 15px 30px;
+        background: #e50914;
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: opacity 0.3s;
+    }
+
+    .admin-btn:hover {
+        opacity: 0.9;
+    }
+
+    .admin-btn.secondary {
+        background: transparent;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+</style>

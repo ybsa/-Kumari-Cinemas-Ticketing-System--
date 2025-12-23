@@ -1,0 +1,128 @@
+@model IEnumerable<KumariCinemas.Web.Models.Movie>
+
+@{
+    ViewData["Title"] = "Manage Movies";
+}
+
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>🎬 Manage Movies</h1>
+        <a asp-action="AddMovie" class="btn-add">+ Add New Movie</a>
+    </header>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <div class="movies-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Genre</th>
+                    <th>Language</th>
+                    <th>Release Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var movie in Model)
+                {
+                    <tr>
+                        <td>@movie.MovieId</td>
+                        <td>@movie.Title</td>
+                        <td>@movie.Genre</td>
+                        <td>@movie.Language</td>
+                        <td>@movie.ReleaseDate.ToString("MMM dd, yyyy")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-nav">
+        <a asp-action="Index" class="admin-btn secondary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<style>
+    .admin-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .btn-add {
+        background: #2ecc71;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .alert-success {
+        background: rgba(46, 204, 113, 0.2);
+        border: 1px solid #2ecc71;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        color: #2ecc71;
+    }
+
+    .movies-table {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    th {
+        background: rgba(0, 0, 0, 0.3);
+        color: #888;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+
+    tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .admin-nav {
+        text-align: center;
+    }
+
+    .admin-btn {
+        padding: 12px 24px;
+        background: #e50914;
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    .admin-btn.secondary {
+        background: transparent;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+</style>

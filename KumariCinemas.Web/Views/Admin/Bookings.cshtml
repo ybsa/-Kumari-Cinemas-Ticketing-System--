@@ -1,0 +1,131 @@
+@model IEnumerable<KumariCinemas.Web.Models.Booking>
+
+@{
+    ViewData["Title"] = "All Bookings";
+}
+
+<div class="admin-container">
+    <header class="admin-header">
+        <h1>🎟️ All Bookings</h1>
+    </header>
+
+    <div class="bookings-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Booking ID</th>
+                    <th>Movie</th>
+                    <th>Show Time</th>
+                    <th>Tickets</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Booked On</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var booking in Model)
+                {
+                    <tr>
+                        <td>#KC-@booking.BookingId.ToString("D6")</td>
+                        <td>@booking.MovieTitle</td>
+                        <td>@booking.ShowDateTime.ToString("MMM dd, hh:mm tt")</td>
+                        <td>@booking.TotalTickets</td>
+                        <td>Rs. @booking.FinalPrice</td>
+                        <td><span class="status @booking.Status.ToLower()">@booking.Status</span></td>
+                        <td>@booking.BookingTime.ToString("MMM dd, yyyy")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-nav">
+        <a asp-action="Index" class="admin-btn secondary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<style>
+    .admin-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    .admin-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .bookings-table {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 30px;
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+    }
+
+    th, td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    th {
+        background: rgba(0, 0, 0, 0.3);
+        color: #888;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+
+    tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status.booked {
+        background: rgba(241, 196, 15, 0.2);
+        color: #f1c40f;
+    }
+
+    .status.paid {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+    }
+
+    .status.cancelled {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+    }
+
+    .admin-nav {
+        text-align: center;
+    }
+
+    .admin-btn {
+        padding: 12px 24px;
+        background: #e50914;
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    .admin-btn.secondary {
+        background: transparent;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+</style>
