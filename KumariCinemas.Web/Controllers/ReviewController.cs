@@ -31,14 +31,14 @@ namespace KumariCinemas.Web.Controllers
                 await connection.OpenAsync();
                 string sql = @"
                     INSERT INTO T_Reviews (MovieId, UserId, Rating, CommentText) 
-                    VALUES (:mid, :uid, :r, :c)";
+                    VALUES (:movieId, :userId, :rating, :commentText)";
 
                 using (var command = new OracleCommand(sql, connection))
                 {
-                    command.Parameters.Add("mid", movieId);
-                    command.Parameters.Add("uid", userId);
-                    command.Parameters.Add("r", rating);
-                    command.Parameters.Add("c", comment);
+                    command.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    command.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
+                    command.Parameters.Add(new OracleParameter("rating", OracleDbType.Int32) { Value = rating });
+                    command.Parameters.Add(new OracleParameter("commentText", OracleDbType.Clob) { Value = comment ?? "" });
                     await command.ExecuteNonQueryAsync();
                 }
             }

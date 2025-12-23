@@ -149,22 +149,29 @@ namespace KumariCinemas.Web.Controllers
                             return RedirectToAction("Index");
                         }
 
-                        // 3. Proceed with Booking
+                        // 3. Proceed with Booking and get BookingId
+                        int bookingId = 0;
                         string sql = @"
                             INSERT INTO T_Bookings (UserId, ShowId, Status, FinalPrice, TotalTickets) 
-                            VALUES (:userId, :showId, 'BOOKED', :finalPrice, :quantity)";
+                            VALUES (:userId, :showId, 'BOOKED', :finalPrice, :quantity)
+                            RETURNING BookingId INTO :bookingId";
 
                         using (var command = new OracleCommand(sql, connection))
                         {
                             command.Transaction = transaction;
-                            command.Parameters.Add("userId", userId);
-                            command.Parameters.Add("showId", showId);
-                            command.Parameters.Add("finalPrice", finalPrice);
-                            command.Parameters.Add("quantity", quantity);
+                            command.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
+                            command.Parameters.Add(new OracleParameter("showId", OracleDbType.Int32) { Value = showId });
+                            command.Parameters.Add(new OracleParameter("finalPrice", OracleDbType.Decimal) { Value = finalPrice });
+                            command.Parameters.Add(new OracleParameter("quantity", OracleDbType.Int32) { Value = quantity });
+                            command.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Direction = System.Data.ParameterDirection.Output });
                             await command.ExecuteNonQueryAsync();
+                            bookingId = Convert.ToInt32(command.Parameters["bookingId"].Value.ToString());
                         }
 
                         transaction.Commit();
+                        
+                        // Redirect to confirmation page
+                        return RedirectToAction("BookingConfirmation", new { id = bookingId });
                     }
                     catch 
                     {
@@ -174,7 +181,7 @@ namespace KumariCinemas.Web.Controllers
                 }
             }
 
-            return RedirectToAction("MyBookings");
+            return RedirectToAction("Index");
         }
 
         public async Task<IActionResult> MyBookings()
@@ -220,6 +227,49 @@ namespace KumariCinemas.Web.Controllers
                 }
             }
             return View(bookings);
+        }
+
+        public async Task<IActionResult> BookingConfirmation(int id)
+        {
+            var booking = new Booking();
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                string sql = @"
+                    SELECT b.BookingId, b.BookingTime, b.Status, b.FinalPrice, b.TotalTickets,
+                           s.ShowDateTime, m.Title, h.HallName, br.BranchName
+                    FROM T_Bookings b
+                    JOIN M_Shows s ON b.ShowId = s.ShowId
+                    JOIN M_Movies m ON s.MovieId = m.MovieId
+                    JOIN M_Halls h ON s.HallId = h.HallId
+                    JOIN M_Branches br ON h.BranchId = br.BranchId
+                    WHERE b.BookingId = :bookingId";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = id });
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            booking.BookingId = reader.GetInt32(0);
+                            booking.BookingTime = reader.GetDateTime(1);
+                            booking.Status = reader.GetString(2);
+                            booking.FinalPrice = reader.GetDecimal(3);
+                            booking.TotalTickets = reader.GetInt32(4);
+                            booking.ShowDateTime = reader.GetDateTime(5);
+                            booking.MovieTitle = reader.GetString(6);
+                            // Store extra info in ViewBag
+                            ViewBag.HallName = reader.GetString(7);
+                            ViewBag.BranchName = reader.GetString(8);
+                        }
+                    }
+                }
+            }
+
+            return View(booking);
         }
     }
 }

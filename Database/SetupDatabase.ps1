@@ -1,6 +1,6 @@
 # Database Setup Script
 $User = "SYSTEM"
-$Password = "windxebec@2129"
+$Password = "Sameer123"
 $Service = "localhost:1521/XE"
 $ConnectionString = "$User/$Password@$Service"
 

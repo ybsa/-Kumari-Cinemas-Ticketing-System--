@@ -1,0 +1,229 @@
+@model KumariCinemas.Web.Models.Booking
+
+@{
+    ViewData["Title"] = "Booking Confirmed";
+}
+
+<div class="confirmation-container">
+    <div class="confirmation-card">
+        <div class="success-icon">✓</div>
+        <h1>Booking Confirmed!</h1>
+        <p class="subtitle">Your tickets have been reserved successfully</p>
+
+        <div class="ticket-details">
+            <div class="detail-row">
+                <span class="label">Booking Reference</span>
+                <span class="value highlight">#KC-@Model.BookingId.ToString("D6")</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Movie</span>
+                <span class="value">@Model.MovieTitle</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Date & Time</span>
+                <span class="value">@Model.ShowDateTime.ToString("MMM dd, yyyy - hh:mm tt")</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Location</span>
+                <span class="value">@ViewBag.BranchName - @ViewBag.HallName</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Tickets</span>
+                <span class="value">@Model.TotalTickets</span>
+            </div>
+            <div class="detail-row total">
+                <span class="label">Total Paid</span>
+                <span class="value">Rs. @Model.FinalPrice</span>
+            </div>
+        </div>
+
+        <div class="qr-section">
+            <h3>Show this at the theater</h3>
+            <div class="qr-code" id="qrcode"></div>
+            <p class="qr-text">Scan to verify booking</p>
+        </div>
+
+        <div class="action-buttons">
+            <button onclick="downloadTicket()" class="btn-download">
+                📥 Download Ticket
+            </button>
+            <a asp-controller="Ticket" asp-action="Index" class="btn-browse">
+                🎬 Browse More Movies
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .confirmation-container {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    .confirmation-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        color: white;
+        margin: 0 auto 20px;
+    }
+
+    .confirmation-card h1 {
+        color: #2ecc71;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: #b3b3b3;
+        margin-bottom: 30px;
+    }
+
+    .ticket-details {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-row .label {
+        color: #888;
+    }
+
+    .detail-row .value {
+        font-weight: 600;
+    }
+
+    .detail-row .value.highlight {
+        color: #e50914;
+        font-size: 1.2rem;
+    }
+
+    .detail-row.total .value {
+        color: #2ecc71;
+        font-size: 1.3rem;
+    }
+
+    .qr-section {
+        margin: 30px 0;
+    }
+
+    .qr-section h3 {
+        color: #b3b3b3;
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+
+    .qr-code {
+        background: white;
+        width: 180px;
+        height: 180px;
+        margin: 0 auto;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+    }
+
+    .qr-text {
+        color: #666;
+        font-size: 0.8rem;
+        margin-top: 10px;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .btn-download, .btn-browse {
+        padding: 15px 30px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+    }
+
+    .btn-download {
+        background: #e50914;
+        color: white;
+        border: none;
+    }
+
+    .btn-browse {
+        background: transparent;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+
+    .btn-browse:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+</style>
+
+<!-- QR Code Library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+<script>
+    // Generate QR Code
+    document.addEventListener('DOMContentLoaded', function() {
+        var qr = qrcode(0, 'M');
+        qr.addData('KUMARI-CINEMAS-BOOKING-KC-@Model.BookingId.ToString("D6")');
+        qr.make();
+        document.getElementById('qrcode').innerHTML = qr.createImgTag(5, 0);
+    });
+
+    // Download Ticket as Image
+    function downloadTicket() {
+        var ticketContent = `
+╔══════════════════════════════════════╗
+║       🎬 KUMARI CINEMAS 🎬          ║
+╠══════════════════════════════════════╣
+║  Booking Ref: #KC-@Model.BookingId.ToString("D6")
+║  Movie: @Model.MovieTitle
+║  Date: @Model.ShowDateTime.ToString("MMM dd, yyyy")
+║  Time: @Model.ShowDateTime.ToString("hh:mm tt")
+║  Location: @ViewBag.BranchName - @ViewBag.HallName
+║  Tickets: @Model.TotalTickets
+║  Total: Rs. @Model.FinalPrice
+╠══════════════════════════════════════╣
+║  Show this ticket at the entrance    ║
+╚══════════════════════════════════════╝
+        `;
+        
+        var blob = new Blob([ticketContent], {type: 'text/plain'});
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'KumariCinemas-Ticket-KC-@(Model.BookingId.ToString("D6")).txt';
+        link.click();
+    }
+</script>
