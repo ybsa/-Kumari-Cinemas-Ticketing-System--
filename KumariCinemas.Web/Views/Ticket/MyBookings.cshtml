@@ -9,6 +9,19 @@
         <h1>My Bookings</h1>
     </header>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
     <div class="bookings-list">
         @if (!Model.Any())
         {
@@ -31,6 +44,19 @@
                         <span class="qty-badge">@booking.TotalTickets Tickets</span>
                         <span>Total Price</span>
                         <strong>Rs. @booking.FinalPrice</strong>
+                        
+                        @{
+                            var canCancel = booking.Status != "CANCELLED" && (booking.ShowDateTime - DateTime.Now).TotalHours >= 2;
+                        }
+                        
+                        @if (canCancel)
+                        {
+                            <form asp-action="CancelBooking" method="post" style="margin-top: 10px;" 
+                                  onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+                                <input type="hidden" name="bookingId" value="@booking.BookingId" />
+                                <button type="submit" class="btn-cancel">Cancel Booking</button>
+                            </form>
+                        }
                     </div>
                 </div>
             }
@@ -62,5 +88,34 @@
         border-radius: 4px; 
         margin-bottom: 5px; 
         display: inline-block !important; 
+    }
+    .btn-cancel {
+        padding: 6px 16px;
+        background: transparent;
+        border: 1px solid #e74c3c;
+        color: #e74c3c;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .btn-cancel:hover {
+        background: rgba(231, 76, 60, 0.2);
+    }
+    .alert {
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .alert-success {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+        border: 1px solid #2ecc71;
+    }
+    .alert-danger {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+        border: 1px solid #e74c3c;
     }
 </style>

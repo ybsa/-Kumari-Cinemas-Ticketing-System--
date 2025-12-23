@@ -1,0 +1,62 @@
+@model KumariCinemas.Web.Models.Movie
+
+@{
+    ViewData["Title"] = "Edit Movie";
+}
+
+<div class="admin-container">
+    <h2>Edit Movie</h2>
+    
+    <form asp-action="EditMovie" method="post">
+        <input type="hidden" name="movieId" value="@Model.MovieId" />
+        
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="title" value="@Model.Title" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+            <label>Duration</label>
+            <input type="text" name="duration" value="@Model.Duration" class="form-control" placeholder="e.g., 120 min" />
+        </div>
+
+        <div class="form-group">
+            <label>Language</label>
+            <input type="text" name="language" value="@Model.Language" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label>Genre</label>
+            <select name="genre" class="form-control" required>
+                <option value="Fiction" selected="@(Model.Genre == "Fiction")">Fiction</option>
+                <option value="Action" selected="@(Model.Genre == "Action")">Action</option>
+                <option value="Comedy" selected="@(Model.Genre == "Comedy")">Comedy</option>
+                <option value="Drama" selected="@(Model.Genre == "Drama")">Drama</option>
+                <option value="Horror" selected="@(Model.Genre == "Horror")">Horror</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Release Date</label>
+            <input type="date" name="releaseDate" value="@Model.ReleaseDate.ToString("yyyy-MM-dd")" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+            <label>Image URL</label>
+            <input type="url" name="imageUrl" value="@Model.ImageUrl" class="form-control" placeholder="https://..." />
+        </div>
+
+        <button type="submit" class="btn-primary">Update Movie</button>
+        <a asp-action="Movies" class="btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<style>
+    .admin-container { max-width: 600px; margin: 40px auto; padding: 40px; background: rgba(255,255,255,0.05); border-radius: 20px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; color: #b3b3b3; }
+    .form-control { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px; }
+    .btn-primary, .btn-secondary { padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-right: 10px; text-decoration: none; display: inline-block; border: none; }
+    .btn-primary { background: #e50914; color: white; }
+    .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; }
+</style>

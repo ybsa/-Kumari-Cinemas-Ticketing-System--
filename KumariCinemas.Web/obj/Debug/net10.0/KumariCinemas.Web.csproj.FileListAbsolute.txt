@@ -45,3 +45,5 @@ C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Deb
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\ref\KumariCinemas.Web.dll
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\bin\Debug\net10.0\KumariCinemas.Web.staticwebassets.runtime.json
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\compressed\yb6orlwrjz-{0}-rie7hgsnkw-rie7hgsnkw.gz
+C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
+C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\compressed\zjlr2fhsfu-{0}-f9rpf7dblx-f9rpf7dblx.gz

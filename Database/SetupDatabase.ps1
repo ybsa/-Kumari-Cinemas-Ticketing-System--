@@ -1,8 +1,9 @@
 # Database Setup Script
 $User = "SYSTEM"
-$Password = "Sameer123"
+$Password = Read-Host -Prompt "Enter Oracle DB Password for SYSTEM" -AsSecureString
+$PasswordPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password))
 $Service = "localhost:1521/XE"
-$ConnectionString = "$User/$Password@$Service"
+$ConnectionString = "$User/$PasswordPlain@$Service"
 
 Write-Host "Connecting to Oracle Database ($Service)..." -ForegroundColor Cyan
 
@@ -12,14 +13,9 @@ if (-not (Get-Command "sqlplus" -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Run Schema Script
-Write-Host "Executing Schema Script..." -ForegroundColor Yellow
-$SchemaOutput = echo "exit" | sqlplus -S $ConnectionString "@database_schema.sql"
-Write-Host $SchemaOutput
+# Run Main Setup Script
+Write-Host "Executing Main Setup Script (Recreating Schema & Data)..." -ForegroundColor Yellow
+$Output = echo "exit" | sqlplus -S $ConnectionString "@setup_database.sql"
+Write-Host $Output
 
-# Run Sample Data Script
-Write-Host "Executing Sample Data Script..." -ForegroundColor Yellow
-$DataOutput = echo "exit" | sqlplus -S $ConnectionString "@sample_data.sql"
-Write-Host $DataOutput
-
-Write-Host "Database Setup Completed!" -ForegroundColor Green
+Write-Host "Database Setup Completed Successfully!" -ForegroundColor Green

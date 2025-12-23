@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Add Show";
+}
+
+<div class="admin-container">
+    <h2>Add New Show</h2>
+    
+    <form asp-action="AddShow" method="post">
+        <div class="form-group">
+            <label>Movie</label>
+            <select name="movieId" class="form-control" required>
+                <option value="">Select Movie</option>
+                @foreach (var movie in ViewBag.Movies as List<KumariCinemas.Web.Models.Movie>)
+                {
+                    <option value="@movie.MovieId">@movie.Title</option>
+                }
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Hall</label>
+            <select name="hallId" class="form-control" required>
+                <option value="">Select Hall</option>
+                @foreach (var hall in ViewBag.Halls as List<dynamic>)
+                {
+                    <option value="@hall.HallId">@hall.BranchName - @hall.HallName (Capacity: @hall.Capacity)</option>
+                }
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Date & Time</label>
+            <input type="datetime-local" name="showDateTime" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+            <label>Base Price (Rs.)</label>
+            <input type="number" name="basePrice" class="form-control" min="0" step="0.01" required />
+        </div>
+
+        <button type="submit" class="btn-primary">Add Show</button>
+        <a asp-action="Index" class="btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<style>
+    .admin-container { max-width: 600px; margin: 40px auto; padding: 40px; background: rgba(255,255,255,0.05); border-radius: 20px; }
+   .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; color: #b3b3b3; }
+    .form-control { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px; }
+    .btn-primary, .btn-secondary { padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-right: 10px; text-decoration: none; display: inline-block; }
+    .btn-primary { background: #e50914; color: white; border: none; }
+    .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; }
+</style>

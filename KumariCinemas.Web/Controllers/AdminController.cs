@@ -178,5 +178,175 @@ namespace KumariCinemas.Web.Controllers
 
             return View(bookings);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> AddShow()
+        {
+            if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                // Get movies
+                var movies = new List<Movie>();
+                using (var cmd = new OracleCommand("SELECT MovieId, Title FROM M_Movies", connection))
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        movies.Add(new Movie { MovieId = reader.GetInt32(0), Title = reader.GetString(1) });
+                    }
+                }
+
+                // Get halls
+                var halls = new List<dynamic>();
+                string hallSql = @"SELECT h.HallId, h.HallName, h.Capacity, b.BranchName 
+                                   FROM M_Halls h 
+                                   JOIN M_Branches b ON h.BranchId = b.BranchId";
+                using (var cmd = new OracleCommand(hallSql, connection))
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        halls.Add(new { HallId = reader.GetInt32(0), HallName = reader.GetString(1), 
+                                      Capacity = reader.GetInt32(2), BranchName = reader.GetString(3) });
+                    }
+                }
+
+                ViewBag.Movies = movies;
+                ViewBag.Halls = halls;
+            }
+
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddShow(int movieId, int hallId, DateTime showDateTime, decimal basePrice)
+        {
+            if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                string sql = "INSERT INTO M_Shows (MovieId, HallId, ShowDateTime, BasePrice) VALUES (:movieId, :hallId, :showDateTime, :basePrice)";
+                using (var cmd = new OracleCommand(sql, connection))
+                {
+                    cmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    cmd.Parameters.Add(new OracleParameter("hallId", OracleDbType.Int32) { Value = hallId });
+                    cmd.Parameters.Add(new OracleParameter("showDateTime", OracleDbType.TimeStamp) { Value = showDateTime });
+                    cmd.Parameters.Add(new OracleParameter("basePrice", OracleDbType.Decimal) { Value = basePrice });
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+
+            TempData["Success"] = "Show added successfully!";
+            return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditMovie(int id)
+        {
+            if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                string sql = "SELECT MovieId, Title, Duration, Language, Genre, ReleaseDate, ImageUrl FROM M_Movies WHERE MovieId = :id";
+                using (var cmd = new OracleCommand(sql, connection))
+                {
+                    cmd.Parameters.Add(new OracleParameter("id", OracleDbType.Int32) { Value = id });
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            var movie = new Movie
+                            {
+                                MovieId = reader.GetInt32(0),
+                                Title = reader.GetString(1),
+                                Duration = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                                Language = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                                Genre = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                                ReleaseDate = reader.GetDateTime(5),
+                                ImageUrl = reader.IsDBNull(6) ? "" : reader.GetString(6)
+                            };
+                            return View(movie);
+                        }
+                    }
+                }
+            }
+
+            return RedirectToAction("Movies");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditMovie(int movieId, string title, string duration, string language, string genre, DateTime releaseDate, string imageUrl)
+        {
+            if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                string sql = @"UPDATE M_Movies SET Title = :title, Duration = :duration, Language = :language, 
+                               Genre = :genre, ReleaseDate = :releaseDate, ImageUrl = :imageUrl WHERE MovieId = :movieId";
+                using (var cmd = new OracleCommand(sql, connection))
+                {
+                    cmd.Parameters.Add(new OracleParameter("title", OracleDbType.Varchar2) { Value = title });
+                    cmd.Parameters.Add(new OracleParameter("duration", OracleDbType.Varchar2) { Value = duration ?? "" });
+                    cmd.Parameters.Add(new OracleParameter("language", OracleDbType.Varchar2) { Value = language ?? "" });
+                    cmd.Parameters.Add(new OracleParameter("genre", OracleDbType.Varchar2) { Value = genre ?? "" });
+                    cmd.Parameters.Add(new OracleParameter("releaseDate", OracleDbType.Date) { Value = releaseDate });
+                    cmd.Parameters.Add(new OracleParameter("imageUrl", OracleDbType.Varchar2) { Value = imageUrl ?? "" });
+                    cmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+
+            TempData["Success"] = "Movie updated successfully!";
+            return RedirectToAction("Movies");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMovie(int movieId)
+        {
+            if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                
+                // Check if movie has shows
+                string checkSql = "SELECT COUNT(*) FROM M_Shows WHERE MovieId = :movieId";
+                using (var checkCmd = new OracleCommand(checkSql, connection))
+                {
+                    checkCmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    int showCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+                    
+                    if (showCount > 0)
+                    {
+                        TempData["Error"] = "Cannot delete movie with existing shows. Delete shows first.";
+                        return RedirectToAction("Movies");
+                    }
+                }
+
+                string sql = "DELETE FROM M_Movies WHERE MovieId = :movieId";
+                using (var cmd = new OracleCommand(sql, connection))
+                {
+                    cmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+
+            TempData["Success"] = "Movie deleted successfully!";
+            return RedirectToAction("Movies");
+        }
     }
 }
