@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Kumari Cinemas</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo">Kumari Cinemas</div>
+            <div>
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <span style="margin-right: 15px;">Hello, @User.Identity.Name</span>
+                    <a href="/Ticket/MyBookings" style="color: white; margin-right: 15px;">My Bookings</a>
+                    <a href="/User/Logout" style="color: white;">Logout</a>
+                }
+                else
+                {
+                    <a href="/User/Login" style="color: white; margin-right: 15px;">Login</a>
+                    <a href="/User/Register" style="color: white;">Register</a>
+                }
+            </div>
+        </nav>
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

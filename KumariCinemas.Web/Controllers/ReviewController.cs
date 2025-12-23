@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using KumariCinemas.Web.Models;
 using Oracle.ManagedDataAccess.Client;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace KumariCinemas.Web.Controllers
 {
+    [Authorize]
     public class ReviewController : Controller
     {
         private readonly IConfiguration _configuration;
@@ -15,8 +18,13 @@ namespace KumariCinemas.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Add(int movieId, int userId, int rating, string comment)
+        public async Task<IActionResult> Add(int movieId, int rating, string comment)
         {
+            // SECURE: Get UserId from Session
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+            if (userIdClaim == null) return RedirectToAction("Login", "User");
+            int userId = int.Parse(userIdClaim.Value);
+
             string connectionString = _configuration.GetConnectionString("OracleDb");
             using (var connection = new OracleConnection(connectionString))
             {
@@ -35,7 +43,7 @@ namespace KumariCinemas.Web.Controllers
                 }
             }
 
-            return RedirectToAction("Index", "Ticket"); // For now redirect to home
+            return RedirectToAction("Index", "Ticket"); 
         }
     }
 }

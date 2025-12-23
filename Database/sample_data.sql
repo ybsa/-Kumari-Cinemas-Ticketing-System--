@@ -25,6 +25,10 @@ INSERT INTO M_Shows (MovieId, HallId, ShowDateTime, BasePrice)
 VALUES (1, 3, TO_TIMESTAMP('2025-12-21 18:00:00', 'YYYY-MM-DD HH24:MI:SS'), 200);
 
 -- Insert Sample User
+-- NOTE: Password is stored as PLAINTEXT here for demonstration.
+-- In production, passwords are hashed by the application.
+-- To test: Register a new user via the website, or use this user
+-- after modifying UserController to accept plaintext (for demo only).
 INSERT INTO M_Users (Username, Password, Address) 
 VALUES ('Pratibha Gurung', 'password123', 'Pokhara');
 

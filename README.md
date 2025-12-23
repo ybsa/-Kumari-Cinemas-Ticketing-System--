@@ -1,20 +1,42 @@
 # Kumari Cinemas Ticketing System
 
-A premium, web-based movie ticketing system for Kumari Cinemas, built with ASP.NET Core MVC and Oracle SQL.
+A web-based movie ticketing system for Kumari Cinemas, built with **ASP.NET Core MVC** and **Oracle SQL**.
 
 ## Project Structure
 
-- **Database/**: Oracle SQL scripts for schema creation and sample data.
-- **Documentation/**: Project reports, ER diagrams, and setup guides.
-- **KumariCinemas.Web/**: The core ASP.NET Core MVC web application.
+```
+├── Database/               # Oracle SQL scripts
+│   ├── database_schema.sql # Table definitions (8 tables)
+│   └── sample_data.sql     # Sample movies, halls, shows
+│
+├── KumariCinemas.Web/      # ASP.NET Core MVC Application
+│   ├── Controllers/        # HomeController, UserController, TicketController, ReviewController
+│   ├── Models/             # Movie, Show, Booking, Review
+│   ├── Services/           # PricingHelper, PasswordHelper, BookingCleanupService
+│   └── Views/              # Razor views for UI
+│
+└── README.md               # This file
+```
 
 ## Key Features
 
-- **Dark Mode UI**: Modern glassmorphism design.
-- **Dynamic Pricing**: Automated logic for new releases and holidays.
-- **Automated Cancellation**: Background service to handle unpaid bookings.
-- **Normalization**: Fully 3rd Normal Form (3NF) database design.
+- **User Registration & Login** (Secure password hashing)
+- **Browse Movies** with dynamic pricing
+- **Book Tickets** with seat availability check
+- **My Bookings** page to view booking history
+- **Submit Reviews** for movies
+- **Background Service** to auto-cancel unpaid bookings
 
-## Getting Started
+## Database Setup
 
-Refer to the [Demo Guide](file:///Documentation/demo_guide.md) for step-by-step setup and presentation instructions.
+1. Install Oracle Database XE
+2. Open SQL Developer
+3. Run `Database/database_schema.sql`
+4. Run `Database/sample_data.sql`
+
+## Run Application
+
+1. Open in Visual Studio
+2. Press F5 to run
+3. Click "Register" to create a new account
+4. Login with your new account

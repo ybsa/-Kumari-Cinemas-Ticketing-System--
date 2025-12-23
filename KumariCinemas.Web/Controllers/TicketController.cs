@@ -3,18 +3,18 @@ using KumariCinemas.Web.Models;
 using KumariCinemas.Web.Services;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace KumariCinemas.Web.Controllers
 {
+    [Authorize] // Enforce Login
     public class TicketController : Controller
     {
         private readonly IConfiguration _configuration;
-        private readonly IPricingService _pricingService;
 
-        public TicketController(IConfiguration configuration, IPricingService pricingService)
+        public TicketController(IConfiguration configuration)
         {
             _configuration = configuration;
-            _pricingService = pricingService;
         }
 
         public async Task<IActionResult> Index()
@@ -51,9 +51,9 @@ namespace KumariCinemas.Web.Controllers
                             }
                         };
 
-                        // Calculate dynamic price
+                        // Use Static Helper for Price Calculation
                         bool isNewRelease = (show.Movie.ReleaseDate >= DateTime.Now.AddDays(-7));
-                        show.CalculatedPrice = _pricingService.CalculatePrice(show.BasePrice, show.ShowDateTime, isNewRelease);
+                        show.CalculatedPrice = PricingHelper.CalculatePrice(show.BasePrice, show.ShowDateTime, isNewRelease);
                         
                         shows.Add(show);
                     }
@@ -65,25 +65,66 @@ namespace KumariCinemas.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Book(int showId, int userId, decimal finalPrice, int quantity)
+        public async Task<IActionResult> Book(int showId, int quantity)
         {
+            // SECURE: Get UserId from Session (Claim), never trust user input
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+            if (userIdClaim == null) return RedirectToAction("Login", "User");
+            int userId = int.Parse(userIdClaim.Value);
+
             string connectionString = _configuration.GetConnectionString("OracleDb");
             using (var connection = new OracleConnection(connectionString))
             {
                 await connection.OpenAsync();
 
-                // Start Transaction for Atomicity ("Seat Locking Lite")
+                // Start Transaction for Atomicity
                 using (var transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted))
                 {
                     try 
                     {
-                        // 1. Check Capacity (Locked Context)
+                        // 1. SECURE: Recalculate Price Server-Side (Prevent Tampering)
+                        // Fetch Show Details
+                        decimal basePrice = 0;
+                        DateTime showDateTime = DateTime.MinValue;
+                        bool isNewRelease = false;
+
+                        string priceSql = @"
+                            SELECT s.BasePrice, s.ShowDateTime,
+                                   CASE WHEN m.ReleaseDate >= SYSDATE - 7 THEN 1 ELSE 0 END as IsNewRelease
+                            FROM M_Shows s
+                            JOIN M_Movies m ON s.MovieId = m.MovieId
+                            WHERE s.ShowId = :showId";
+
+                        using (var priceCmd = new OracleCommand(priceSql, connection))
+                        {
+                            priceCmd.Transaction = transaction;
+                            priceCmd.Parameters.Add("showId", showId);
+                            using (var reader = await priceCmd.ExecuteReaderAsync())
+                            {
+                                if (await reader.ReadAsync())
+                                {
+                                    basePrice = reader.GetDecimal(0);
+                                    showDateTime = reader.GetDateTime(1);
+                                    isNewRelease = reader.GetInt32(2) == 1;
+                                }
+                                else 
+                                {
+                                    throw new Exception("Show not found");
+                                }
+                            }
+                        }
+
+                        decimal finalPrice = PricingHelper.CalculatePrice(basePrice, showDateTime, isNewRelease) * quantity;
+
+                        // 2. SECURE: Check Capacity with LOCKING (Prevent Race Conditions)
+                        // Note: Oracle's 'FOR UPDATE' locks the rows returned.
                         string capacitySql = @"
                             SELECT h.Capacity, 
                                    (SELECT COALESCE(SUM(b.TotalTickets), 0) FROM T_Bookings b WHERE b.ShowId = s.ShowId AND b.Status != 'CANCELLED') as BookedCount
                             FROM M_Shows s
                             JOIN M_Halls h ON s.HallId = h.HallId
-                            WHERE s.ShowId = :showId"; // In a real app, add 'FOR UPDATE' to lock rows
+                            WHERE s.ShowId = :showId
+                            FOR UPDATE"; 
 
                         int capacity = 0;
                         int booked = 0;
@@ -108,7 +149,7 @@ namespace KumariCinemas.Web.Controllers
                             return RedirectToAction("Index");
                         }
 
-                        // 2. Proceed with Booking
+                        // 3. Proceed with Booking
                         string sql = @"
                             INSERT INTO T_Bookings (UserId, ShowId, Status, FinalPrice, TotalTickets) 
                             VALUES (:userId, :showId, 'BOOKED', :finalPrice, :quantity)";
@@ -133,11 +174,16 @@ namespace KumariCinemas.Web.Controllers
                 }
             }
 
-            return RedirectToAction("MyBookings", new { userId = userId });
+            return RedirectToAction("MyBookings");
         }
 
-        public async Task<IActionResult> MyBookings(int userId)
+        public async Task<IActionResult> MyBookings()
         {
+            // SECURE: Get UserId from Session
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+            if (userIdClaim == null) return RedirectToAction("Login", "User");
+            int userId = int.Parse(userIdClaim.Value);
+
             var bookings = new List<Booking>();
             string connectionString = _configuration.GetConnectionString("OracleDb");
 
@@ -159,7 +205,6 @@ namespace KumariCinemas.Web.Controllers
                     {
                         while (await reader.ReadAsync())
                         {
-                            // Logic placeholder for MyBookings display (can be enhanced to show date)
                             bookings.Add(new Booking
                             {
                                 BookingId = reader.GetInt32(0),

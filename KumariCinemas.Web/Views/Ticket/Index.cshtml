@@ -36,8 +36,7 @@
                 <form asp-action="Book" method="post" class="booking-form">
                     <input type="hidden" name="showId" value="@show.ShowId" />
                     <input type="hidden" name="unitPrice" value="@show.CalculatedPrice" class="unit-price" />
-                    <input type="hidden" name="finalPrice" value="@show.CalculatedPrice" class="total-price-hidden" />
-                    <input type="hidden" name="userId" value="1" /> @* Mocking logged in user *@
+                    @* Final Price Calculate Server Side for Security *@
                     
                     <div class="qty-control">
                         <label>Tickets:</label>
@@ -51,7 +50,7 @@
                     <h4>Rate this Movie</h4>
                     <form asp-controller="Review" asp-action="Add" method="post">
                         <input type="hidden" name="movieId" value="@show.MovieId" />
-                        <input type="hidden" name="userId" value="1" /> @* Mock user *@
+                        @* UserId Injection Removed *@
                         <select name="rating" class="form-control" style="margin-bottom: 5px;">
                             <option value="5">★★★★★ (5/5)</option>
                             <option value="4">★★★★☆ (4/5)</option>
@@ -235,7 +234,6 @@
         const qty = parseInt(input.value);
         const totalPrice = unitPrice * qty;
         
-        form.querySelector('.total-price-hidden').value = totalPrice.toFixed(2);
         form.querySelector('.display-price').innerText = totalPrice.toFixed(2);
     }
 </script>

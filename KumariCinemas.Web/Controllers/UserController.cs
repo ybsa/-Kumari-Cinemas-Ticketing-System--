@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using KumariCinemas.Web.Models;
 using Oracle.ManagedDataAccess.Client;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace KumariCinemas.Web.Controllers
 {
@@ -74,8 +77,21 @@ namespace KumariCinemas.Web.Controllers
 
                             if (Services.PasswordHelper.VerifyPassword(storedHash, password))
                             {
-                                // Login Success
-                                // In a real app, set cookies/claims here. 
+                                // Login Success - Set Secure Cookie
+                                var claims = new List<Claim>
+                                {
+                                    new Claim(ClaimTypes.Name, username),
+                                    new Claim("UserId", userId.ToString())
+                                };
+
+                                var claimsIdentity = new ClaimsIdentity(claims, "CookieAuth");
+                                var authProperties = new AuthenticationProperties
+                                {
+                                    IsPersistent = true,
+                                    ExpiresUtc = DateTime.UtcNow.AddHours(2)
+                                };
+
+                                await HttpContext.SignInAsync("CookieAuth", new ClaimsPrincipal(claimsIdentity), authProperties);
                                 return RedirectToAction("Index", "Ticket");
                             }
                         }
@@ -85,6 +101,12 @@ namespace KumariCinemas.Web.Controllers
 
             ViewBag.Error = "Invalid username or password";
             return View();
+        }
+
+        public async Task<IActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync("CookieAuth");
+            return RedirectToAction("Login");
         }
     }
 }
