@@ -25,6 +25,24 @@ namespace KumariCinemas.Web.Models
         public decimal CalculatedPrice { get; set; }
     }
 
+    public class MovieDetailsViewModel
+    {
+        public Movie Movie { get; set; }
+        public List<Show> UpcomingShows { get; set; }
+        public List<ReviewViewModel> Reviews { get; set; }
+        public double AverageRating { get; set; }
+        public bool IsInWatchlist { get; set; }
+    }
+
+    public class ReviewViewModel
+    {
+        public int ReviewId { get; set; }
+        public string Username { get; set; }
+        public int Rating { get; set; }
+        public string Comment { get; set; }
+        public DateTime ReviewDate { get; set; }
+    }
+
     public class Booking
     {
         public int BookingId { get; set; }

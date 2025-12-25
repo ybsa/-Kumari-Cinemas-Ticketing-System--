@@ -1,0 +1,144 @@
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>My Profile</h2>
+        <p class="text-secondary">Manage your account details</p>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success">@TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
+
+        <form asp-action="UpdateProfile" method="post">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" value="@ViewBag.Username" class="form-control" disabled style="opacity: 0.7;" />
+                <small class="text-muted">Username cannot be changed</small>
+            </div>
+
+            <div class="form-group">
+                <label>Address</label>
+                <input type="text" name="address" value="@ViewBag.Address" class="form-control" placeholder="Enter your address" />
+            </div>
+
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;" />
+
+            <h3>Change Password</h3>
+            <p class="text-small text-muted mb-3">Leave blank if you don't want to change password</p>
+
+            <div class="form-group">
+                <label>Current Password</label>
+                <input type="password" name="currentPassword" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" name="newPassword" class="form-control" />
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary-block">Update Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+    }
+
+    .auth-box {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 40px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        max-width: 500px;
+        color: white;
+    }
+
+    .auth-box h2 {
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 2rem;
+    }
+
+    .text-secondary {
+        text-align: center;
+        color: #aaa;
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #ccc;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: white;
+        transition: border-color 0.3s;
+    }
+
+    .form-control:focus {
+        border-color: #e50914;
+        outline: none;
+    }
+
+    .btn-primary-block {
+        width: 100%;
+        padding: 14px;
+        background: #e50914;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+        margin-top: 10px;
+    }
+
+    .btn-primary-block:hover {
+        background: #f40612;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .alert-success {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+        border: 1px solid #2ecc71;
+    }
+
+    .alert-danger {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+        border: 1px solid #e74c3c;
+    }
+</style>

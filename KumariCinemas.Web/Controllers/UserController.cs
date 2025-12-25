@@ -155,5 +155,102 @@ namespace KumariCinemas.Web.Controllers
             await HttpContext.SignOutAsync("CookieAuth");
             return RedirectToAction("Login");
         }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> Profile()
+        {
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+            if (userIdClaim == null) return RedirectToAction("Login");
+            int userId = int.Parse(userIdClaim.Value);
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                string sql = "SELECT Username, Address FROM M_Users WHERE UserId = :userId";
+                using (var cmd = new OracleCommand(sql, connection))
+                {
+                    cmd.Parameters.Add("userId", userId);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            ViewBag.Username = reader.GetString(0);
+                            ViewBag.Address = reader.IsDBNull(1) ? "" : reader.GetString(1);
+                        }
+                    }
+                }
+            }
+            return View();
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateProfile(string address, string currentPassword, string newPassword)
+        {
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+            if (userIdClaim == null) return RedirectToAction("Login");
+            int userId = int.Parse(userIdClaim.Value);
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                // Update Address
+                if (address != null) // Allow empty string
+                {
+                    string updateSql = "UPDATE M_Users SET Address = :address WHERE UserId = :userId";
+                    using (var cmd = new OracleCommand(updateSql, connection))
+                    {
+                        cmd.Parameters.Add("address", address);
+                        cmd.Parameters.Add("userId", userId);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+
+                // Update Password if provided
+                if (!string.IsNullOrEmpty(currentPassword) && !string.IsNullOrEmpty(newPassword))
+                {
+                    // Verify current password
+                    // Note: In real app, re-hash and check. Here we assume simple hashing from Login.
+                    // For brevity, we are using the Helper.
+                    string currentHash = KumariCinemas.Web.Services.PasswordHelper.HashPassword(currentPassword);
+
+                    string checkSql = "SELECT COUNT(*) FROM M_Users WHERE UserId = :userId AND Password = :password";
+                    using (var cmd = new OracleCommand(checkSql, connection))
+                    {
+                        cmd.Parameters.Add("userId", userId);
+                        cmd.Parameters.Add("password", currentHash);
+                        int count = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+
+                        if (count > 0)
+                        {
+                            string newHash = KumariCinemas.Web.Services.PasswordHelper.HashPassword(newPassword);
+                            string passSql = "UPDATE M_Users SET Password = :password WHERE UserId = :userId";
+                            using (var updateCmd = new OracleCommand(passSql, connection))
+                            {
+                                updateCmd.Parameters.Add("password", newHash);
+                                updateCmd.Parameters.Add("userId", userId);
+                                await updateCmd.ExecuteNonQueryAsync();
+                            }
+                            TempData["Success"] = "Profile and Password updated successfully!";
+                        }
+                        else
+                        {
+                            TempData["Error"] = "Current password incorrect.";
+                        }
+                    }
+                }
+                else
+                {
+                    TempData["Success"] = "Profile updated successfully!";
+                }
+            }
+
+            return RedirectToAction("Profile");
+        }
     }
 }

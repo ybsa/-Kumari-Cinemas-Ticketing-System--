@@ -20,6 +20,128 @@ namespace KumariCinemas.Web.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var model = new MovieDetailsViewModel();
+            model.UpcomingShows = new List<Show>();
+            model.Reviews = new List<ReviewViewModel>();
+
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
+            int? userId = userIdClaim != null ? int.Parse(userIdClaim.Value) : null;
+
+            string connectionString = _configuration.GetConnectionString("OracleDb");
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                // 1. Get Movie Details
+                string movieSql = "SELECT MovieId, Title, Duration, Language, Genre, ReleaseDate, Description, ImageUrl FROM M_Movies WHERE MovieId = :id";
+                using (var cmd = new OracleCommand(movieSql, connection))
+                {
+                    cmd.Parameters.Add("id", id);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            model.Movie = new Movie
+                            {
+                                MovieId = reader.GetInt32(0),
+                                Title = reader.GetString(1),
+                                Duration = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                                Language = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                                Genre = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                                ReleaseDate = reader.GetDateTime(5),
+                                Description = reader.IsDBNull(6) ? "" : reader.GetString(6),
+                                ImageUrl = reader.IsDBNull(7) ? "" : reader.GetString(7)
+                            };
+                        }
+                        else
+                        {
+                            return NotFound();
+                        }
+                    }
+                }
+
+                // 2. Get Upcoming Shows
+                string showSql = @"
+                    SELECT ShowId, ShowDateTime, BasePrice
+                    FROM M_Shows
+                    WHERE MovieId = :id AND ShowDateTime > SYSDATE
+                    ORDER BY ShowDateTime";
+
+                using (var cmd = new OracleCommand(showSql, connection))
+                {
+                    cmd.Parameters.Add("id", id);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var show = new Show
+                            {
+                                ShowId = reader.GetInt32(0),
+                                MovieId = id,
+                                ShowDateTime = reader.GetDateTime(1),
+                                BasePrice = reader.GetDecimal(2),
+                                Movie = model.Movie
+                            };
+                             bool isNewRelease = (show.Movie.ReleaseDate >= DateTime.Now.AddDays(-7));
+                             show.CalculatedPrice = PricingHelper.CalculatePrice(show.BasePrice, show.ShowDateTime, isNewRelease);
+                             model.UpcomingShows.Add(show);
+                        }
+                    }
+                }
+
+                // 3. Get Reviews
+                string reviewSql = @"
+                    SELECT r.ReviewId, r.Rating, r.CommentText, r.ReviewDate, u.Username
+                    FROM T_Reviews r
+                    JOIN M_Users u ON r.UserId = u.UserId
+                    WHERE r.MovieId = :id
+                    ORDER BY r.ReviewDate DESC";
+
+                using (var cmd = new OracleCommand(reviewSql, connection))
+                {
+                    cmd.Parameters.Add("id", id);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            model.Reviews.Add(new ReviewViewModel
+                            {
+                                ReviewId = reader.GetInt32(0),
+                                Rating = reader.GetInt32(1),
+                                Comment = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                                ReviewDate = reader.GetDateTime(3),
+                                Username = reader.GetString(4)
+                            });
+                        }
+                    }
+                }
+
+                // 4. Calculate Average Rating
+                if (model.Reviews.Any())
+                {
+                    model.AverageRating = model.Reviews.Average(r => r.Rating);
+                }
+
+                // 5. Check Watchlist
+                if (userId.HasValue)
+                {
+                    string watchSql = "SELECT COUNT(*) FROM T_Watchlist WHERE UserId = :userId AND MovieId = :movieId";
+                    using (var cmd = new OracleCommand(watchSql, connection))
+                    {
+                        cmd.Parameters.Add("userId", userId.Value);
+                        cmd.Parameters.Add("movieId", id);
+                        int count = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                        model.IsInWatchlist = count > 0;
+                    }
+                }
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetSeatAvailability(int showId)
         {
             var bookedSeats = new List<string>();
@@ -75,7 +197,7 @@ namespace KumariCinemas.Web.Controllers
             }
         }
 
-        public async Task<IActionResult> Index(string search, string genre, DateTime? date)
+        public async Task<IActionResult> Index(string search, string genre, DateTime? date, string sort, string lang)
         {
             try
             {
@@ -89,7 +211,7 @@ namespace KumariCinemas.Web.Controllers
                 // Build dynamic SQL with filters
                 string sql = @"
                     SELECT s.ShowId, s.MovieId, s.HallId, s.ShowDateTime, s.BasePrice, 
-                           m.Title, m.ReleaseDate, m.Genre, m.ImageUrl 
+                           m.Title, m.ReleaseDate, m.Genre, m.ImageUrl, m.Language
                     FROM M_Shows s 
                     JOIN M_Movies m ON s.MovieId = m.MovieId
                     WHERE 1=1";
@@ -114,6 +236,19 @@ namespace KumariCinemas.Web.Controllers
                     parameters.Add(new OracleParameter("showDate", OracleDbType.Date) { Value = date.Value.Date });
                 }
 
+                if (!string.IsNullOrWhiteSpace(lang))
+                {
+                    sql += " AND m.Language = :lang";
+                    parameters.Add(new OracleParameter("lang", OracleDbType.Varchar2) { Value = lang });
+                }
+
+                // Sorting
+                if (sort == "date_desc") sql += " ORDER BY m.ReleaseDate DESC";
+                else if (sort == "date_asc") sql += " ORDER BY m.ReleaseDate ASC";
+                else if (sort == "price_asc") sql += " ORDER BY s.BasePrice ASC";
+                else if (sort == "price_desc") sql += " ORDER BY s.BasePrice DESC";
+                else sql += " ORDER BY s.ShowDateTime ASC"; // Default
+
                 using (var command = new OracleCommand(sql, connection))
                 {
                     foreach (var param in parameters)
@@ -136,7 +271,8 @@ namespace KumariCinemas.Web.Controllers
                                 Title = reader.GetString(5),
                                 ReleaseDate = reader.GetDateTime(6),
                                 Genre = reader.GetString(7),
-                                ImageUrl = reader.IsDBNull(8) ? null : reader.GetString(8)
+                                ImageUrl = reader.IsDBNull(8) ? null : reader.GetString(8),
+                                Language = reader.IsDBNull(9) ? "" : reader.GetString(9)
                             }
                         };
 

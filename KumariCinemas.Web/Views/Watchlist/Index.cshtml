@@ -1,0 +1,139 @@
+@model IEnumerable<KumariCinemas.Web.Models.Movie>
+
+@{
+    ViewData["Title"] = "My Watchlist";
+}
+
+<div class="watchlist-container">
+    <h1>My Watchlist</h1>
+    <p class="text-secondary">Movies you want to watch</p>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <h3>Your watchlist is empty</h3>
+            <p>Go to <a href="/Ticket/Index">Movies</a> to add some!</p>
+        </div>
+    }
+    else
+    {
+        <div class="movie-grid">
+            @foreach (var movie in Model)
+            {
+                <div class="movie-card">
+                    <div class="poster">
+                        <img src="@movie.ImageUrl" alt="@movie.Title" />
+                    </div>
+                    <div class="info">
+                        <h3>@movie.Title</h3>
+                        <p>@movie.Genre | @movie.Duration</p>
+                        <div class="actions">
+                            <a href="/Ticket/Details/@movie.MovieId" class="btn-primary-sm">Details</a>
+                            <form asp-action="Remove" method="post" style="display:inline;">
+                                <input type="hidden" name="movieId" value="@movie.MovieId" />
+                                <button type="submit" class="btn-danger-sm">Remove</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .watchlist-container {
+        padding: 40px 20px;
+        color: white;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .movie-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 30px;
+        margin-top: 30px;
+    }
+
+    .movie-card {
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.3s;
+    }
+
+    .movie-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .poster img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+    }
+
+    .info {
+        padding: 15px;
+    }
+
+    .info h3 {
+        margin: 0 0 5px 0;
+        font-size: 1.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .info p {
+        color: #aaa;
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+
+    .actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-primary-sm {
+        background: #e50914;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .btn-danger-sm {
+        background: transparent;
+        border: 1px solid #e74c3c;
+        color: #e74c3c;
+        padding: 5px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .btn-danger-sm:hover {
+        background: #e74c3c;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 50px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        margin-top: 30px;
+    }
+
+    .empty-state a {
+        color: #e50914;
+    }
+</style>

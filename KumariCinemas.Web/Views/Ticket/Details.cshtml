@@ -1,0 +1,247 @@
+@model KumariCinemas.Web.Models.MovieDetailsViewModel
+
+@{
+    ViewData["Title"] = Model.Movie.Title;
+}
+
+<div class="movie-details-container">
+    <div class="movie-hero" style="background-image: linear-gradient(to bottom, rgba(10,10,11,0.8), rgba(10,10,11,1)), url('@Model.Movie.ImageUrl');">
+        <div class="hero-content">
+            <div class="poster-wrapper">
+                <img src="@Model.Movie.ImageUrl" alt="@Model.Movie.Title" />
+            </div>
+            <div class="details-wrapper">
+                <h1>@Model.Movie.Title</h1>
+                <div class="meta-tags">
+                    <span class="badge">@Model.Movie.Genre</span>
+                    <span class="badge">@Model.Movie.Language</span>
+                    <span class="badge">@Model.Movie.Duration</span>
+                    <span class="rating">⭐ @Model.AverageRating.ToString("0.0")/5 (@Model.Reviews.Count reviews)</span>
+                </div>
+
+                <p class="description">@Model.Movie.Description</p>
+
+                <div class="action-buttons">
+                    @if (Model.IsInWatchlist)
+                    {
+                        <form asp-controller="Watchlist" asp-action="Remove" method="post" style="display:inline;">
+                            <input type="hidden" name="movieId" value="@Model.Movie.MovieId" />
+                            <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                            <button type="submit" class="btn-secondary">✓ Added to Watchlist</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-controller="Watchlist" asp-action="Add" method="post" style="display:inline;">
+                            <input type="hidden" name="movieId" value="@Model.Movie.MovieId" />
+                            <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                            <button type="submit" class="btn-secondary">Add to Watchlist</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <div class="main-column">
+            <section class="upcoming-shows">
+                <h2>Upcoming Shows</h2>
+                @if (Model.UpcomingShows.Any())
+                {
+                    <div class="shows-list">
+                        @foreach (var show in Model.UpcomingShows)
+                        {
+                            <div class="show-item">
+                                <div class="show-info">
+                                    <span class="show-date">@show.ShowDateTime.ToString("MMM dd")</span>
+                                    <span class="show-time">@show.ShowDateTime.ToString("hh:mm tt")</span>
+                                    <span class="show-price">Rs. @show.CalculatedPrice</span>
+                                </div>
+                                <a href="/Ticket/Index?search=@Model.Movie.Title" class="btn-book-sm">Book</a>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p>No upcoming shows scheduled.</p>
+                }
+            </section>
+
+            <section class="reviews-section">
+                <div class="reviews-header">
+                    <h2>Reviews</h2>
+                </div>
+
+                <!-- Review Form -->
+                <div class="add-review">
+                    <h3>Write a Review</h3>
+                    <form asp-controller="Review" asp-action="Add" method="post">
+                        <input type="hidden" name="movieId" value="@Model.Movie.MovieId" />
+                        <div class="rating-select">
+                            <label>Rating:</label>
+                            <select name="rating" class="form-control-sm">
+                                <option value="5">★★★★★ Excellent</option>
+                                <option value="4">★★★★☆ Good</option>
+                                <option value="3">★★★☆☆ Average</option>
+                                <option value="2">★★☆☆☆ Poor</option>
+                                <option value="1">★☆☆☆☆ Terrible</option>
+                            </select>
+                        </div>
+                        <textarea name="comment" class="form-control" placeholder="Share your thoughts..." rows="3"></textarea>
+                        <button type="submit" class="btn-primary mt-2">Post Review</button>
+                    </form>
+                </div>
+
+                <!-- Reviews List -->
+                <div class="reviews-list">
+                    @foreach (var review in Model.Reviews)
+                    {
+                        <div class="review-card">
+                            <div class="review-header">
+                                <span class="username">@review.Username</span>
+                                <span class="review-date">@review.ReviewDate.ToString("MMM dd, yyyy")</span>
+                            </div>
+                            <div class="review-rating">
+                                @for(int i=0; i<review.Rating; i++) { <span>★</span> }
+                                @for(int i=review.Rating; i<5; i++) { <span style="color:#444">★</span> }
+                            </div>
+                            <p class="review-text">@review.Comment</p>
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<style>
+    .movie-details-container {
+        color: white;
+    }
+
+    .movie-hero {
+        background-size: cover;
+        background-position: center;
+        padding: 60px 20px;
+        border-radius: 20px;
+        margin-bottom: 40px;
+    }
+
+    .hero-content {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+    }
+
+    .poster-wrapper img {
+        width: 300px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .details-wrapper h1 {
+        font-size: 3rem;
+        margin-bottom: 20px;
+    }
+
+    .meta-tags {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+
+    .badge {
+        background: rgba(255,255,255,0.1);
+        padding: 5px 15px;
+        border-radius: 20px;
+    }
+
+    .rating {
+        color: #f1c40f;
+        font-weight: bold;
+    }
+
+    .description {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        color: #ddd;
+        margin-bottom: 30px;
+    }
+
+    .action-buttons .btn-secondary {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 1px solid white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .upcoming-shows {
+        background: rgba(255,255,255,0.05);
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 40px;
+    }
+
+    .show-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .show-item:last-child { border-bottom: none; }
+
+    .show-info span { margin-right: 20px; }
+    .show-date { color: #aaa; }
+    .show-time { font-weight: bold; }
+    .show-price { color: #e50914; }
+
+    .btn-book-sm {
+        background: #e50914;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+
+    .review-card {
+        background: rgba(255,255,255,0.05);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        color: #aaa;
+    }
+
+    .review-rating { color: #f1c40f; margin-bottom: 10px; }
+
+    .add-review {
+        background: rgba(255,255,255,0.05);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+    }
+
+    .form-control, .form-control-sm {
+        width: 100%;
+        background: rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+</style>
