@@ -19,6 +19,22 @@
                 <option value="Drama" selected="@(Context.Request.Query["genre"] == "Drama")">Drama</option>
                 <option value="Horror" selected="@(Context.Request.Query["genre"] == "Horror")">Horror</option>
             </select>
+
+            <select name="lang" class="filter-select">
+                <option value="">All Languages</option>
+                <option value="English" selected="@(Context.Request.Query["lang"] == "English")">English</option>
+                <option value="Hindi" selected="@(Context.Request.Query["lang"] == "Hindi")">Hindi</option>
+                <option value="French" selected="@(Context.Request.Query["lang"] == "French")">French</option>
+            </select>
+
+            <select name="sort" class="filter-select">
+                <option value="">Sort By</option>
+                <option value="date_desc" selected="@(Context.Request.Query["sort"] == "date_desc")">Newest Movies</option>
+                <option value="date_asc" selected="@(Context.Request.Query["sort"] == "date_asc")">Oldest Movies</option>
+                <option value="price_asc" selected="@(Context.Request.Query["sort"] == "price_asc")">Price: Low to High</option>
+                <option value="price_desc" selected="@(Context.Request.Query["sort"] == "price_desc")">Price: High to Low</option>
+            </select>
+
             <input type="date" name="date" value="@Context.Request.Query["date"]" class="filter-select" />
             <button type="submit" class="btn-filter">Filter</button>
             <a href="/Ticket/Index" class="btn-clear">Clear</a>
@@ -76,21 +92,10 @@
                     </button>
                 </form>
 
-                <div class="review-section">
-                    <h4>Rate this Movie</h4>
-                    <form asp-controller="Review" asp-action="Add" method="post">
-                        <input type="hidden" name="movieId" value="@show.MovieId" />
-                        @* UserId Injection Removed *@
-                        <select name="rating" class="form-control" style="margin-bottom: 5px;">
-                            <option value="5">★★★★★ (5/5)</option>
-                            <option value="4">★★★★☆ (4/5)</option>
-                            <option value="3">★★★☆☆ (3/5)</option>
-                            <option value="2">★★☆☆☆ (2/5)</option>
-                            <option value="1">★☆☆☆☆ (1/5)</option>
-                        </select>
-                        <textarea name="comment" class="form-control" placeholder="Write a review..." rows="2"></textarea>
-                        <button type="submit" class="btn-review">Submit Review</button>
-                    </form>
+                <div class="details-link" style="margin-top: 15px; text-align: center;">
+                    <a href="/Ticket/Details/@show.MovieId" class="btn-secondary" style="display: block; width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; color: white; text-decoration: none;">
+                        View Details & Reviews
+                    </a>
                 </div>
             </div>
         }

@@ -13,8 +13,16 @@ builder.Services.AddAuthentication("CookieAuth")
 
 // Register Custom Services
 builder.Services.AddHostedService<BookingCleanupService>();
+builder.Services.AddScoped<DatabaseInitializer>();
 
 var app = builder.Build();
+
+// Initialize Database
+using (var scope = app.Services.CreateScope())
+{
+    var dbInit = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+    dbInit.Initialize();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
