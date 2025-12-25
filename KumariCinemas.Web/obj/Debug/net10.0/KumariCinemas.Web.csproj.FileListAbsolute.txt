@@ -1,4 +1,5 @@
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\bin\Debug\net10.0\appsettings.json
+C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\bin\Debug\net10.0\KumariCinemas.Web.staticwebassets.runtime.json
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\bin\Debug\net10.0\KumariCinemas.Web.staticwebassets.endpoints.json
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\bin\Debug\net10.0\KumariCinemas.Web.exe
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\bin\Debug\net10.0\KumariCinemas.Web.deps.json
@@ -32,6 +33,8 @@ C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Deb
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\scopedcss\bundle\KumariCinemas.Web.styles.css
+C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\compressed\yb6orlwrjz-{0}-rie7hgsnkw-rie7hgsnkw.gz
+C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\compressed\zjlr2fhsfu-{0}-f9rpf7dblx-f9rpf7dblx.gz
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\staticwebassets.build.json
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\staticwebassets.build.json.cache
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\staticwebassets.development.json
@@ -43,7 +46,3 @@ C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Deb
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\KumariCinemas.Web.pdb
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\KumariCinemas.Web.genruntimeconfig.cache
 C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\ref\KumariCinemas.Web.dll
-C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\bin\Debug\net10.0\KumariCinemas.Web.staticwebassets.runtime.json
-C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\compressed\yb6orlwrjz-{0}-rie7hgsnkw-rie7hgsnkw.gz
-C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
-C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\obj\Debug\net10.0\compressed\zjlr2fhsfu-{0}-f9rpf7dblx-f9rpf7dblx.gz

@@ -1,4 +1,0 @@
-wwwroot\css\site.css
-wwwroot\js\seat-selection.js
-C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\wwwroot\css\site.css
-C:\Users\wind xebec\-Kumari-Cinemas-Ticketing-System--\KumariCinemas.Web\wwwroot\js\seat-selection.js
