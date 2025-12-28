@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using KumariCinemas.Web.Models;
-using Oracle.ManagedDataAccess.Client;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
@@ -25,20 +25,21 @@ namespace KumariCinemas.Web.Controllers
             if (userIdClaim == null) return RedirectToAction("Login", "User");
             int userId = int.Parse(userIdClaim.Value);
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 string sql = @"
                     INSERT INTO T_Reviews (MovieId, UserId, Rating, CommentText) 
-                    VALUES (:movieId, :userId, :rating, :commentText)";
+                    VALUES (@movieId, @userId, @rating, @commentText)";
 
-                using (var command = new OracleCommand(sql, connection))
+                using (var command = connection.CreateCommand())
                 {
-                    command.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
-                    command.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
-                    command.Parameters.Add(new OracleParameter("rating", OracleDbType.Int32) { Value = rating });
-                    command.Parameters.Add(new OracleParameter("commentText", OracleDbType.Clob) { Value = comment ?? "" });
+                    command.CommandText = sql;
+                    command.Parameters.AddWithValue("@movieId", movieId);
+                    command.Parameters.AddWithValue("@userId", userId);
+                    command.Parameters.AddWithValue("@rating", rating);
+                    command.Parameters.AddWithValue("@commentText", comment ?? (object)DBNull.Value);
                     await command.ExecuteNonQueryAsync();
                 }
             }

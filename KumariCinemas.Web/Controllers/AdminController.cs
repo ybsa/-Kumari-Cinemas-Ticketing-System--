@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using KumariCinemas.Web.Models;
-using Oracle.ManagedDataAccess.Client;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authorization;
 
 namespace KumariCinemas.Web.Controllers
@@ -22,14 +22,15 @@ namespace KumariCinemas.Web.Controllers
             if (userIdClaim == null) return false;
             int userId = int.Parse(userIdClaim.Value);
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
-                string sql = "SELECT Role FROM M_Users WHERE UserId = :userId";
-                using (var cmd = new OracleCommand(sql, connection))
+                string sql = "SELECT Role FROM M_Users WHERE UserId = @userId";
+                using (var cmd = connection.CreateCommand())
                 {
-                    cmd.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
+                    cmd.CommandText = sql;
+                    cmd.Parameters.AddWithValue("@userId", userId);
                     var result = await cmd.ExecuteScalarAsync();
                     return result?.ToString() == "ADMIN";
                 }
@@ -46,27 +47,39 @@ namespace KumariCinemas.Web.Controllers
 
             // Get dashboard stats
             var stats = new Dictionary<string, int>();
-            string connectionString = _configuration.GetConnectionString("OracleDb");
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            using (var connection = new OracleConnection(connectionString))
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
 
                 // Total Users
-                using (var cmd = new OracleCommand("SELECT COUNT(*) FROM M_Users", connection))
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT COUNT(*) FROM M_Users";
                     stats["TotalUsers"] = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
 
                 // Total Movies
-                using (var cmd = new OracleCommand("SELECT COUNT(*) FROM M_Movies", connection))
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT COUNT(*) FROM M_Movies";
                     stats["TotalMovies"] = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
 
                 // Total Bookings
-                using (var cmd = new OracleCommand("SELECT COUNT(*) FROM T_Bookings", connection))
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT COUNT(*) FROM T_Bookings";
                     stats["TotalBookings"] = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
 
                 // Total Revenue
-                using (var cmd = new OracleCommand("SELECT COALESCE(SUM(FinalPrice), 0) FROM T_Bookings WHERE Status != 'CANCELLED'", connection))
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT COALESCE(SUM(FinalPrice), 0) FROM T_Bookings WHERE Status != 'CANCELLED'";
                     stats["TotalRevenue"] = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
             }
 
             return View(stats);
@@ -77,26 +90,29 @@ namespace KumariCinemas.Web.Controllers
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
             var movies = new List<Movie>();
-            string connectionString = _configuration.GetConnectionString("OracleDb");
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            using (var connection = new OracleConnection(connectionString))
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 string sql = "SELECT MovieId, Title, Duration, Language, Genre, ReleaseDate FROM M_Movies";
-                using (var cmd = new OracleCommand(sql, connection))
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (var cmd = connection.CreateCommand())
                 {
-                    while (await reader.ReadAsync())
+                    cmd.CommandText = sql;
+                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        movies.Add(new Movie
+                        while (await reader.ReadAsync())
                         {
-                            MovieId = reader.GetInt32(0),
-                            Title = reader.GetString(1),
-                            Duration = reader.IsDBNull(2) ? "" : reader.GetString(2),
-                            Language = reader.IsDBNull(3) ? "" : reader.GetString(3),
-                            Genre = reader.IsDBNull(4) ? "" : reader.GetString(4),
-                            ReleaseDate = reader.GetDateTime(5)
-                        });
+                            movies.Add(new Movie
+                            {
+                                MovieId = reader.GetInt32(0),
+                                Title = reader.GetString(1),
+                                Duration = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                                Language = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                                Genre = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                                ReleaseDate = DateTime.Parse(reader.GetString(5))
+                            });
+                        }
                     }
                 }
             }
@@ -117,19 +133,20 @@ namespace KumariCinemas.Web.Controllers
         {
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 string sql = @"INSERT INTO M_Movies (Title, Duration, Language, Genre, ReleaseDate) 
-                               VALUES (:title, :duration, :language, :genre, :releaseDate)";
-                using (var cmd = new OracleCommand(sql, connection))
+                               VALUES (@title, @duration, @language, @genre, @releaseDate)";
+                using (var cmd = connection.CreateCommand())
                 {
-                    cmd.Parameters.Add(new OracleParameter("title", OracleDbType.Varchar2) { Value = title });
-                    cmd.Parameters.Add(new OracleParameter("duration", OracleDbType.Varchar2) { Value = duration ?? "" });
-                    cmd.Parameters.Add(new OracleParameter("language", OracleDbType.Varchar2) { Value = language ?? "" });
-                    cmd.Parameters.Add(new OracleParameter("genre", OracleDbType.Varchar2) { Value = genre ?? "" });
-                    cmd.Parameters.Add(new OracleParameter("releaseDate", OracleDbType.Date) { Value = releaseDate });
+                    cmd.CommandText = sql;
+                    cmd.Parameters.AddWithValue("@title", title);
+                    cmd.Parameters.AddWithValue("@duration", duration ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@language", language ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@genre", genre ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@releaseDate", releaseDate.ToString("yyyy-MM-dd HH:mm:ss"));
                     await cmd.ExecuteNonQueryAsync();
                 }
             }
@@ -143,9 +160,9 @@ namespace KumariCinemas.Web.Controllers
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
             var bookings = new List<Booking>();
-            string connectionString = _configuration.GetConnectionString("OracleDb");
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            using (var connection = new OracleConnection(connectionString))
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 string sql = @"
@@ -157,21 +174,24 @@ namespace KumariCinemas.Web.Controllers
                     JOIN M_Users u ON b.UserId = u.UserId
                     ORDER BY b.BookingTime DESC";
 
-                using (var cmd = new OracleCommand(sql, connection))
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (var cmd = connection.CreateCommand())
                 {
-                    while (await reader.ReadAsync())
+                    cmd.CommandText = sql;
+                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        bookings.Add(new Booking
+                        while (await reader.ReadAsync())
                         {
-                            BookingId = reader.GetInt32(0),
-                            BookingTime = reader.GetDateTime(1),
-                            Status = reader.GetString(2),
-                            FinalPrice = reader.GetDecimal(3),
-                            TotalTickets = reader.GetInt32(4),
-                            ShowDateTime = reader.GetDateTime(5),
-                            MovieTitle = reader.GetString(6)
-                        });
+                            bookings.Add(new Booking
+                            {
+                                BookingId = reader.GetInt32(0),
+                                BookingTime = DateTime.Parse(reader.GetString(1)),
+                                Status = reader.GetString(2),
+                                FinalPrice = reader.GetDecimal(3),
+                                TotalTickets = reader.GetInt32(4),
+                                ShowDateTime = DateTime.Parse(reader.GetString(5)),
+                                MovieTitle = reader.GetString(6)
+                            });
+                        }
                     }
                 }
             }
@@ -184,19 +204,22 @@ namespace KumariCinemas.Web.Controllers
         {
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
 
                 // Get movies
                 var movies = new List<Movie>();
-                using (var cmd = new OracleCommand("SELECT MovieId, Title FROM M_Movies", connection))
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (var cmd = connection.CreateCommand())
                 {
-                    while (await reader.ReadAsync())
+                    cmd.CommandText = "SELECT MovieId, Title FROM M_Movies";
+                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        movies.Add(new Movie { MovieId = reader.GetInt32(0), Title = reader.GetString(1) });
+                        while (await reader.ReadAsync())
+                        {
+                            movies.Add(new Movie { MovieId = reader.GetInt32(0), Title = reader.GetString(1) });
+                        }
                     }
                 }
 
@@ -205,13 +228,16 @@ namespace KumariCinemas.Web.Controllers
                 string hallSql = @"SELECT h.HallId, h.HallName, h.Capacity, b.BranchName 
                                    FROM M_Halls h 
                                    JOIN M_Branches b ON h.BranchId = b.BranchId";
-                using (var cmd = new OracleCommand(hallSql, connection))
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (var cmd = connection.CreateCommand())
                 {
-                    while (await reader.ReadAsync())
+                    cmd.CommandText = hallSql;
+                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        halls.Add(new { HallId = reader.GetInt32(0), HallName = reader.GetString(1), 
-                                      Capacity = reader.GetInt32(2), BranchName = reader.GetString(3) });
+                        while (await reader.ReadAsync())
+                        {
+                            halls.Add(new { HallId = reader.GetInt32(0), HallName = reader.GetString(1), 
+                                          Capacity = reader.GetInt32(2), BranchName = reader.GetString(3) });
+                        }
                     }
                 }
 
@@ -228,17 +254,19 @@ namespace KumariCinemas.Web.Controllers
         {
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
-                string sql = "INSERT INTO M_Shows (MovieId, HallId, ShowDateTime, BasePrice) VALUES (:movieId, :hallId, :showDateTime, :basePrice)";
-                using (var cmd = new OracleCommand(sql, connection))
+                string sql = "INSERT INTO M_Shows (MovieId, HallId, ShowDateTime, BasePrice) VALUES (@movieId, @hallId, @showDateTime, @basePrice)";
+                using (var cmd = connection.CreateCommand())
                 {
-                    cmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
-                    cmd.Parameters.Add(new OracleParameter("hallId", OracleDbType.Int32) { Value = hallId });
-                    cmd.Parameters.Add(new OracleParameter("showDateTime", OracleDbType.TimeStamp) { Value = showDateTime });
-                    cmd.Parameters.Add(new OracleParameter("basePrice", OracleDbType.Decimal) { Value = basePrice });
+                    cmd.CommandText = sql;
+                    cmd.Parameters.AddWithValue("@movieId", movieId);
+                    cmd.Parameters.AddWithValue("@hallId", hallId);
+                    // Use standard date format
+                    cmd.Parameters.AddWithValue("@showDateTime", showDateTime.ToString("yyyy-MM-dd HH:mm:ss")); 
+                    cmd.Parameters.AddWithValue("@basePrice", basePrice);
                     await cmd.ExecuteNonQueryAsync();
                 }
             }
@@ -252,14 +280,15 @@ namespace KumariCinemas.Web.Controllers
         {
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
-                string sql = "SELECT MovieId, Title, Duration, Language, Genre, ReleaseDate, ImageUrl FROM M_Movies WHERE MovieId = :id";
-                using (var cmd = new OracleCommand(sql, connection))
+                string sql = "SELECT MovieId, Title, Duration, Language, Genre, ReleaseDate, ImageUrl FROM M_Movies WHERE MovieId = @id";
+                using (var cmd = connection.CreateCommand())
                 {
-                    cmd.Parameters.Add(new OracleParameter("id", OracleDbType.Int32) { Value = id });
+                    cmd.CommandText = sql;
+                    cmd.Parameters.AddWithValue("@id", id);
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         if (await reader.ReadAsync())
@@ -271,7 +300,7 @@ namespace KumariCinemas.Web.Controllers
                                 Duration = reader.IsDBNull(2) ? "" : reader.GetString(2),
                                 Language = reader.IsDBNull(3) ? "" : reader.GetString(3),
                                 Genre = reader.IsDBNull(4) ? "" : reader.GetString(4),
-                                ReleaseDate = reader.GetDateTime(5),
+                                ReleaseDate = DateTime.Parse(reader.GetString(5)),
                                 ImageUrl = reader.IsDBNull(6) ? "" : reader.GetString(6)
                             };
                             return View(movie);
@@ -289,21 +318,22 @@ namespace KumariCinemas.Web.Controllers
         {
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
-                string sql = @"UPDATE M_Movies SET Title = :title, Duration = :duration, Language = :language, 
-                               Genre = :genre, ReleaseDate = :releaseDate, ImageUrl = :imageUrl WHERE MovieId = :movieId";
-                using (var cmd = new OracleCommand(sql, connection))
+                string sql = @"UPDATE M_Movies SET Title = @title, Duration = @duration, Language = @language, 
+                               Genre = @genre, ReleaseDate = @releaseDate, ImageUrl = @imageUrl WHERE MovieId = @movieId";
+                using (var cmd = connection.CreateCommand())
                 {
-                    cmd.Parameters.Add(new OracleParameter("title", OracleDbType.Varchar2) { Value = title });
-                    cmd.Parameters.Add(new OracleParameter("duration", OracleDbType.Varchar2) { Value = duration ?? "" });
-                    cmd.Parameters.Add(new OracleParameter("language", OracleDbType.Varchar2) { Value = language ?? "" });
-                    cmd.Parameters.Add(new OracleParameter("genre", OracleDbType.Varchar2) { Value = genre ?? "" });
-                    cmd.Parameters.Add(new OracleParameter("releaseDate", OracleDbType.Date) { Value = releaseDate });
-                    cmd.Parameters.Add(new OracleParameter("imageUrl", OracleDbType.Varchar2) { Value = imageUrl ?? "" });
-                    cmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    cmd.CommandText = sql;
+                    cmd.Parameters.AddWithValue("@title", title);
+                    cmd.Parameters.AddWithValue("@duration", duration ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@language", language ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@genre", genre ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@releaseDate", releaseDate.ToString("yyyy-MM-dd HH:mm:ss"));
+                    cmd.Parameters.AddWithValue("@imageUrl", imageUrl ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@movieId", movieId);
                     await cmd.ExecuteNonQueryAsync();
                 }
             }
@@ -318,16 +348,17 @@ namespace KumariCinemas.Web.Controllers
         {
             if (!await IsAdmin()) return RedirectToAction("Index", "Ticket");
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 
                 // Check if movie has shows
-                string checkSql = "SELECT COUNT(*) FROM M_Shows WHERE MovieId = :movieId";
-                using (var checkCmd = new OracleCommand(checkSql, connection))
+                string checkSql = "SELECT COUNT(*) FROM M_Shows WHERE MovieId = @movieId";
+                using (var checkCmd = connection.CreateCommand())
                 {
-                    checkCmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    checkCmd.CommandText = checkSql;
+                    checkCmd.Parameters.AddWithValue("@movieId", movieId);
                     int showCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
                     
                     if (showCount > 0)
@@ -337,10 +368,11 @@ namespace KumariCinemas.Web.Controllers
                     }
                 }
 
-                string sql = "DELETE FROM M_Movies WHERE MovieId = :movieId";
-                using (var cmd = new OracleCommand(sql, connection))
+                string sql = "DELETE FROM M_Movies WHERE MovieId = @movieId";
+                using (var cmd = connection.CreateCommand())
                 {
-                    cmd.Parameters.Add(new OracleParameter("movieId", OracleDbType.Int32) { Value = movieId });
+                    cmd.CommandText = sql;
+                    cmd.Parameters.AddWithValue("@movieId", movieId);
                     await cmd.ExecuteNonQueryAsync();
                 }
             }

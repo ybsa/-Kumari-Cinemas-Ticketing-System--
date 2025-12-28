@@ -1,4 +1,5 @@
 using KumariCinemas.Web.Services;
+using KumariCinemas.Web.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,9 @@ builder.Services.AddAuthentication("CookieAuth")
 builder.Services.AddHostedService<BookingCleanupService>();
 
 var app = builder.Build();
+
+// Initialize Database
+DbInitializer.Initialize(app.Configuration);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

@@ -1,5 +1,5 @@
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+
 
 namespace KumariCinemas.Web.Services
 {
@@ -38,25 +38,28 @@ namespace KumariCinemas.Web.Services
 
         private async Task CleanupExpiredBookings()
         {
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
 
                 // Logic: Find Bookings where status is 'BOOKED' (not PAID) 
                 // and the show start time is less than 1 hour away.
+                // SQLite: datetime('now') is in UTC usually, but we are using local time in seed. 
+                // Assuming consistency: check if ShowDateTime < current_time + 1 hour
                 string sql = @"
-                    UPDATE T_Bookings b
-                    SET b.Status = 'CANCELLED'
-                    WHERE b.Status = 'BOOKED'
+                    UPDATE T_Bookings
+                    SET Status = 'CANCELLED'
+                    WHERE Status = 'BOOKED'
                     AND EXISTS (
                         SELECT 1 FROM M_Shows s 
-                        WHERE s.ShowId = b.ShowId 
-                        AND s.ShowDateTime < (SYSDATE + 1/24) -- Cancel 1 hr before show
+                        WHERE s.ShowId = T_Bookings.ShowId 
+                        AND s.ShowDateTime < datetime('now', '+1 hour')
                     )";
 
-                using (var command = new OracleCommand(sql, connection))
+                using (var command = connection.CreateCommand())
                 {
+                    command.CommandText = sql;
                     int rowsAffected = await command.ExecuteNonQueryAsync();
                     if (rowsAffected > 0)
                     {

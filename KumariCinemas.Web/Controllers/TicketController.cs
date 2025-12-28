@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using KumariCinemas.Web.Models;
 using KumariCinemas.Web.Services;
-using Oracle.ManagedDataAccess.Client;
+using Microsoft.Data.Sqlite;
 using System.Data;
 using Microsoft.AspNetCore.Authorization;
 
@@ -27,8 +27,8 @@ namespace KumariCinemas.Web.Controllers
 
             try 
             {
-                string connectionString = _configuration.GetConnectionString("OracleDb");
-                using (var connection = new OracleConnection(connectionString))
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                using (var connection = new SqliteConnection(connectionString))
                 {
                     await connection.OpenAsync();
 
@@ -37,11 +37,12 @@ namespace KumariCinemas.Web.Controllers
                         SELECT h.Capacity 
                         FROM M_Shows s
                         JOIN M_Halls h ON s.HallId = h.HallId
-                        WHERE s.ShowId = :showId";
+                        WHERE s.ShowId = @showId";
                     
-                    using (var cmd = new OracleCommand(capSql, connection))
+                    using (var cmd = connection.CreateCommand())
                     {
-                        cmd.Parameters.Add("showId", showId);
+                        cmd.CommandText = capSql;
+                        cmd.Parameters.AddWithValue("@showId", showId);
                         object result = await cmd.ExecuteScalarAsync();
                         if (result != null) capacity = Convert.ToInt32(result);
                     }
@@ -51,11 +52,12 @@ namespace KumariCinemas.Web.Controllers
                         SELECT t.SeatNumber 
                         FROM T_Tickets t
                         JOIN T_Bookings b ON t.BookingId = b.BookingId
-                        WHERE b.ShowId = :showId AND b.Status IN ('BOOKED', 'PAID')";
+                        WHERE b.ShowId = @showId AND b.Status IN ('BOOKED', 'PAID')";
 
-                    using (var cmd = new OracleCommand(seatSql, connection))
+                    using (var cmd = connection.CreateCommand())
                     {
-                        cmd.Parameters.Add("showId", showId);
+                        cmd.CommandText = seatSql;
+                        cmd.Parameters.AddWithValue("@showId", showId);
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
                             while (await reader.ReadAsync())
@@ -80,13 +82,14 @@ namespace KumariCinemas.Web.Controllers
             try
             {
                 var shows = new List<Show>();
-                string connectionString = _configuration.GetConnectionString("OracleDb");
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            using (var connection = new OracleConnection(connectionString))
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 
                 // Build dynamic SQL with filters
+                // SQLite: ReleaseDate is text. To check 'RELEASED >= NOW-7', we use date(m.ReleaseDate) >= date('now', '-7 days')
                 string sql = @"
                     SELECT s.ShowId, s.MovieId, s.HallId, s.ShowDateTime, s.BasePrice, 
                            m.Title, m.ReleaseDate, m.Genre, m.ImageUrl 
@@ -94,62 +97,59 @@ namespace KumariCinemas.Web.Controllers
                     JOIN M_Movies m ON s.MovieId = m.MovieId
                     WHERE 1=1";
 
-                var parameters = new List<OracleParameter>();
-
-                if (!string.IsNullOrWhiteSpace(search))
+                using (var command = connection.CreateCommand())
                 {
-                    sql += " AND UPPER(m.Title) LIKE UPPER(:search)";
-                    parameters.Add(new OracleParameter("search", OracleDbType.Varchar2) { Value = $"%{search}%" });
-                }
 
-                if (!string.IsNullOrWhiteSpace(genre))
-                {
-                    sql += " AND m.Genre = :genre";
-                    parameters.Add(new OracleParameter("genre", OracleDbType.Varchar2) { Value = genre });
-                }
-
-                if (date.HasValue)
-                {
-                    sql += " AND TRUNC(s.ShowDateTime) = :showDate";
-                    parameters.Add(new OracleParameter("showDate", OracleDbType.Date) { Value = date.Value.Date });
-                }
-
-                using (var command = new OracleCommand(sql, connection))
-                {
-                    foreach (var param in parameters)
+                    if (!string.IsNullOrWhiteSpace(search))
                     {
-                        command.Parameters.Add(param);
+                        sql += " AND UPPER(m.Title) LIKE UPPER(@search)";
+                        command.Parameters.AddWithValue("@search", $"%{search}%");
                     }
-                using (var reader = await command.ExecuteReaderAsync())
-                {
-                    while (await reader.ReadAsync())
+
+                    if (!string.IsNullOrWhiteSpace(genre))
                     {
-                        var show = new Show
+                        sql += " AND m.Genre = @genre";
+                        command.Parameters.AddWithValue("@genre", genre);
+                    }
+
+                    if (date.HasValue)
+                    {
+                        // Compare usage of YYYY-MM-DD
+                        sql += " AND date(s.ShowDateTime) = date(@showDate)";
+                        command.Parameters.AddWithValue("@showDate", date.Value.ToString("yyyy-MM-dd"));
+                    }
+
+                    command.CommandText = sql;
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
                         {
-                            ShowId = reader.GetInt32(0),
-                            MovieId = reader.GetInt32(1),
-                            HallId = reader.GetInt32(2),
-                            ShowDateTime = reader.GetDateTime(3),
-                            BasePrice = reader.GetDecimal(4),
-                            Movie = new Movie 
-                            { 
-                                Title = reader.GetString(5),
-                                ReleaseDate = reader.GetDateTime(6),
-                                Genre = reader.GetString(7),
-                                ImageUrl = reader.IsDBNull(8) ? null : reader.GetString(8)
-                            }
-                        };
+                            var show = new Show
+                            {
+                                ShowId = reader.GetInt32(0),
+                                MovieId = reader.GetInt32(1),
+                                HallId = reader.GetInt32(2),
+                                ShowDateTime = DateTime.Parse(reader.GetString(3)),
+                                BasePrice = reader.GetDecimal(4),
+                                Movie = new Movie 
+                                { 
+                                    Title = reader.GetString(5),
+                                    ReleaseDate = DateTime.Parse(reader.GetString(6)),
+                                    Genre = reader.GetString(7),
+                                    ImageUrl = reader.IsDBNull(8) ? null : reader.GetString(8)
+                                }
+                            };
 
-                        // Use Static Helper for Price Calculation
-                        bool isNewRelease = (show.Movie.ReleaseDate >= DateTime.Now.AddDays(-7));
-                        show.CalculatedPrice = PricingHelper.CalculatePrice(show.BasePrice, show.ShowDateTime, isNewRelease);
-                        
-                        shows.Add(show);
+                            // Use Static Helper for Price Calculation
+                            bool isNewRelease = (show.Movie.ReleaseDate >= DateTime.Now.AddDays(-7));
+                            show.CalculatedPrice = PricingHelper.CalculatePrice(show.BasePrice, show.ShowDateTime, isNewRelease);
+                            
+                            shows.Add(show);
+                        }
                     }
                 }
             }
-            }
-
                 return View(shows);
             }
             catch (Exception ex)
@@ -176,13 +176,13 @@ namespace KumariCinemas.Web.Controllers
             if (userIdClaim == null) return RedirectToAction("Login", "User");
             int userId = int.Parse(userIdClaim.Value);
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
 
                 // Start Transaction for Atomicity
-                using (var transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted))
+                using (var transaction = connection.BeginTransaction())
                 {
                     try 
                     {
@@ -192,23 +192,28 @@ namespace KumariCinemas.Web.Controllers
                         DateTime showDateTime = DateTime.MinValue;
                         bool isNewRelease = false;
 
+                        // SQLite: ReleaseDate is text. Use date(...) for comparisons.
+                        // "julianday('now') - julianday(ReleaseDate) < 7" logic or simply check date string if consistent.
+                        // Let's use ReleaseDate string parsing in C# logic if easier, but here we do it in SQL.
+                        // We'll rely on our seed format YYYY-MM-DD HH:MM:SS
                         string priceSql = @"
                             SELECT s.BasePrice, s.ShowDateTime,
-                                   CASE WHEN m.ReleaseDate >= SYSDATE - 7 THEN 1 ELSE 0 END as IsNewRelease
+                                   CASE WHEN date(m.ReleaseDate) >= date('now', '-7 days') THEN 1 ELSE 0 END as IsNewRelease
                             FROM M_Shows s
                             JOIN M_Movies m ON s.MovieId = m.MovieId
-                            WHERE s.ShowId = :showId";
+                            WHERE s.ShowId = @showId";
 
-                        using (var priceCmd = new OracleCommand(priceSql, connection))
+                        using (var priceCmd = connection.CreateCommand())
                         {
                             priceCmd.Transaction = transaction;
-                            priceCmd.Parameters.Add("showId", showId);
+                            priceCmd.CommandText = priceSql;
+                            priceCmd.Parameters.AddWithValue("@showId", showId);
                             using (var reader = await priceCmd.ExecuteReaderAsync())
                             {
                                 if (await reader.ReadAsync())
                                 {
                                     basePrice = reader.GetDecimal(0);
-                                    showDateTime = reader.GetDateTime(1);
+                                    showDateTime = DateTime.Parse(reader.GetString(1));
                                     isNewRelease = reader.GetInt32(2) == 1;
                                 }
                                 else 
@@ -220,23 +225,23 @@ namespace KumariCinemas.Web.Controllers
 
                         decimal finalPrice = PricingHelper.CalculatePrice(basePrice, showDateTime, isNewRelease) * quantity;
 
-                        // 2. SECURE: Check Capacity with LOCKING (Prevent Race Conditions)
-                        // Note: Oracle's 'FOR UPDATE' locks the rows returned.
+                        // 2. SECURE: Check Capacity (SQLite doesn't support FOR UPDATE in same way, 
+                        // but default locking behavior usually prevents dirty reads during transaction).
                         string capacitySql = @"
                             SELECT h.Capacity, 
                                    (SELECT COALESCE(SUM(b.TotalTickets), 0) FROM T_Bookings b WHERE b.ShowId = s.ShowId AND b.Status != 'CANCELLED') as BookedCount
                             FROM M_Shows s
                             JOIN M_Halls h ON s.HallId = h.HallId
-                            WHERE s.ShowId = :showId
-                            FOR UPDATE"; 
+                            WHERE s.ShowId = @showId"; 
 
                         int capacity = 0;
                         int booked = 0;
 
-                        using (var capCmd = new OracleCommand(capacitySql, connection))
+                        using (var capCmd = connection.CreateCommand())
                         {
                             capCmd.Transaction = transaction;
-                            capCmd.Parameters.Add("showId", showId);
+                            capCmd.CommandText = capacitySql;
+                            capCmd.Parameters.AddWithValue("@showId", showId);
                             using (var reader = await capCmd.ExecuteReaderAsync())
                             {
                                 if (await reader.ReadAsync())
@@ -267,21 +272,24 @@ namespace KumariCinemas.Web.Controllers
                             }
 
                             // Check if any selected seats are already booked
-                            string seatCheckSql = @"
+                            // Building dynamic IN clause
+                            var paramNames = selectedSeats.Select((s, i) => $"@seat{i}").ToList();
+                            string seatCheckSql = $@"
                                 SELECT COUNT(*) 
                                 FROM T_Tickets t
                                 JOIN T_Bookings b ON t.BookingId = b.BookingId
-                                WHERE b.ShowId = :showId 
+                                WHERE b.ShowId = @showId 
                                   AND b.Status IN ('BOOKED', 'PAID')
-                                  AND t.SeatNumber IN (" + string.Join(",", selectedSeats.Select((s, i) => $":seat{i}")) + @")";
+                                  AND t.SeatNumber IN ({string.Join(",", paramNames)})";
 
-                            using (var seatCheckCmd = new OracleCommand(seatCheckSql, connection))
+                            using (var seatCheckCmd = connection.CreateCommand())
                             {
                                 seatCheckCmd.Transaction = transaction;
-                                seatCheckCmd.Parameters.Add(new OracleParameter("showId", OracleDbType.Int32) { Value = showId });
+                                seatCheckCmd.CommandText = seatCheckSql;
+                                seatCheckCmd.Parameters.AddWithValue("@showId", showId);
                                 for (int i = 0; i < selectedSeats.Count; i++)
                                 {
-                                    seatCheckCmd.Parameters.Add(new OracleParameter($"seat{i}", OracleDbType.Varchar2) { Value = selectedSeats[i] });
+                                    seatCheckCmd.Parameters.AddWithValue(paramNames[i], selectedSeats[i]);
                                 }
                                 
                                 var seatsTaken = Convert.ToInt32(await seatCheckCmd.ExecuteScalarAsync());
@@ -297,19 +305,19 @@ namespace KumariCinemas.Web.Controllers
                         int bookingId = 0;
                         string sql = @"
                             INSERT INTO T_Bookings (UserId, ShowId, Status, FinalPrice, TotalTickets) 
-                            VALUES (:userId, :showId, 'BOOKED', :finalPrice, :quantity)
-                            RETURNING BookingId INTO :bookingId";
+                            VALUES (@userId, @showId, 'BOOKED', @finalPrice, @quantity);
+                            SELECT last_insert_rowid();";
 
-                        using (var command = new OracleCommand(sql, connection))
+                        using (var command = connection.CreateCommand())
                         {
                             command.Transaction = transaction;
-                            command.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
-                            command.Parameters.Add(new OracleParameter("showId", OracleDbType.Int32) { Value = showId });
-                            command.Parameters.Add(new OracleParameter("finalPrice", OracleDbType.Decimal) { Value = finalPrice });
-                            command.Parameters.Add(new OracleParameter("quantity", OracleDbType.Int32) { Value = quantity });
-                            command.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Direction = System.Data.ParameterDirection.Output });
-                            await command.ExecuteNonQueryAsync();
-                            bookingId = Convert.ToInt32(command.Parameters["bookingId"].Value.ToString());
+                            command.CommandText = sql;
+                            command.Parameters.AddWithValue("@userId", userId);
+                            command.Parameters.AddWithValue("@showId", showId);
+                            command.Parameters.AddWithValue("@finalPrice", finalPrice);
+                            command.Parameters.AddWithValue("@quantity", quantity);
+                            
+                            bookingId = Convert.ToInt32(await command.ExecuteScalarAsync());
                         }
 
                         // 5. Insert selected seats into T_Tickets
@@ -317,12 +325,13 @@ namespace KumariCinemas.Web.Controllers
                         {
                             foreach (var seat in selectedSeats)
                             {
-                                string ticketSql = "INSERT INTO T_Tickets (BookingId, SeatNumber) VALUES (:bookingId, :seatNumber)";
-                                using (var ticketCmd = new OracleCommand(ticketSql, connection))
+                                string ticketSql = "INSERT INTO T_Tickets (BookingId, SeatNumber) VALUES (@bookingId, @seatNumber)";
+                                using (var ticketCmd = connection.CreateCommand())
                                 {
                                     ticketCmd.Transaction = transaction;
-                                    ticketCmd.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = bookingId });
-                                    ticketCmd.Parameters.Add(new OracleParameter("seatNumber", OracleDbType.Varchar2) { Value = seat });
+                                    ticketCmd.CommandText = ticketSql;
+                                    ticketCmd.Parameters.AddWithValue("@bookingId", bookingId);
+                                    ticketCmd.Parameters.AddWithValue("@seatNumber", seat);
                                     await ticketCmd.ExecuteNonQueryAsync();
                                 }
                             }
@@ -333,7 +342,7 @@ namespace KumariCinemas.Web.Controllers
                         // Redirect to payment page instead of confirmation
                         return RedirectToAction("Index", "Payment", new { bookingId });
                     }
-                    catch (OracleException ex)
+                    catch (SqliteException ex)
                     {
                         transaction.Rollback();
                         _logger.LogError(ex, "Database error during booking for show {ShowId}", showId);
@@ -361,9 +370,9 @@ namespace KumariCinemas.Web.Controllers
             int userId = int.Parse(userIdClaim.Value);
 
             var bookings = new List<Booking>();
-            string connectionString = _configuration.GetConnectionString("OracleDb");
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            using (var connection = new OracleConnection(connectionString))
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 string sql = @"
@@ -372,11 +381,12 @@ namespace KumariCinemas.Web.Controllers
                     FROM T_Bookings b
                     JOIN M_Shows s ON b.ShowId = s.ShowId
                     JOIN M_Movies m ON s.MovieId = m.MovieId
-                    WHERE b.UserId = :userId";
+                    WHERE b.UserId = @userId";
 
-                using (var command = new OracleCommand(sql, connection))
+                using (var command = connection.CreateCommand())
                 {
-                    command.Parameters.Add("userId", userId);
+                    command.CommandText = sql;
+                    command.Parameters.AddWithValue("@userId", userId);
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -384,11 +394,11 @@ namespace KumariCinemas.Web.Controllers
                             bookings.Add(new Booking
                             {
                                 BookingId = reader.GetInt32(0),
-                                BookingTime = reader.GetDateTime(3),
+                                BookingTime = DateTime.Parse(reader.GetString(3)),
                                 Status = reader.GetString(4),
                                 FinalPrice = reader.GetDecimal(5),
                                 TotalTickets = reader.GetInt32(6),
-                                ShowDateTime = reader.GetDateTime(7),
+                                ShowDateTime = DateTime.Parse(reader.GetString(7)),
                                 MovieTitle = reader.GetString(8)
                             });
                         }
@@ -409,8 +419,8 @@ namespace KumariCinemas.Web.Controllers
 
             try
             {
-                string connectionString = _configuration.GetConnectionString("OracleDb");
-                using (var connection = new OracleConnection(connectionString))
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                using (var connection = new SqliteConnection(connectionString))
                 {
                     await connection.OpenAsync();
 
@@ -419,12 +429,13 @@ namespace KumariCinemas.Web.Controllers
                         SELECT b.Status, s.ShowDateTime
                         FROM T_Bookings b
                         JOIN M_Shows s ON b.ShowId = s.ShowId
-                        WHERE b.BookingId = :bookingId AND b.UserId = :userId";
+                        WHERE b.BookingId = @bookingId AND b.UserId = @userId";
 
-                    using (var checkCmd = new OracleCommand(checkSql, connection))
+                    using (var checkCmd = connection.CreateCommand())
                     {
-                        checkCmd.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = bookingId });
-                        checkCmd.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
+                        checkCmd.CommandText = checkSql;
+                        checkCmd.Parameters.AddWithValue("@bookingId", bookingId);
+                        checkCmd.Parameters.AddWithValue("@userId", userId);
 
                         using (var reader = await checkCmd.ExecuteReaderAsync())
                         {
@@ -435,7 +446,7 @@ namespace KumariCinemas.Web.Controllers
                             }
 
                             string status = reader.GetString(0);
-                            DateTime showTime = reader.GetDateTime(1);
+                            DateTime showTime = DateTime.Parse(reader.GetString(1));
 
                             if (status == "CANCELLED")
                             {
@@ -452,10 +463,11 @@ namespace KumariCinemas.Web.Controllers
                     }
 
                     // Cancel booking
-                    string updateSql = "UPDATE T_Bookings SET Status = 'CANCELLED' WHERE BookingId = :bookingId";
-                    using (var updateCmd = new OracleCommand(updateSql, connection))
+                    string updateSql = "UPDATE T_Bookings SET Status = 'CANCELLED' WHERE BookingId = @bookingId";
+                    using (var updateCmd = connection.CreateCommand())
                     {
-                        updateCmd.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = bookingId });
+                        updateCmd.CommandText = updateSql;
+                        updateCmd.Parameters.AddWithValue("@bookingId", bookingId);
                         await updateCmd.ExecuteNonQueryAsync();
                     }
 
@@ -474,9 +486,9 @@ namespace KumariCinemas.Web.Controllers
         public async Task<IActionResult> BookingConfirmation(int id)
         {
             var booking = new Booking();
-            string connectionString = _configuration.GetConnectionString("OracleDb");
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            using (var connection = new OracleConnection(connectionString))
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 string sql = @"
@@ -487,21 +499,22 @@ namespace KumariCinemas.Web.Controllers
                     JOIN M_Movies m ON s.MovieId = m.MovieId
                     JOIN M_Halls h ON s.HallId = h.HallId
                     JOIN M_Branches br ON h.BranchId = br.BranchId
-                    WHERE b.BookingId = :bookingId";
+                    WHERE b.BookingId = @bookingId";
 
-                using (var command = new OracleCommand(sql, connection))
+                using (var command = connection.CreateCommand())
                 {
-                    command.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = id });
+                    command.CommandText = sql;
+                    command.Parameters.AddWithValue("@bookingId", id);
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         if (await reader.ReadAsync())
                         {
                             booking.BookingId = reader.GetInt32(0);
-                            booking.BookingTime = reader.GetDateTime(1);
+                            booking.BookingTime = DateTime.Parse(reader.GetString(1));
                             booking.Status = reader.GetString(2);
                             booking.FinalPrice = reader.GetDecimal(3);
                             booking.TotalTickets = reader.GetInt32(4);
-                            booking.ShowDateTime = reader.GetDateTime(5);
+                            booking.ShowDateTime = DateTime.Parse(reader.GetString(5));
                             booking.MovieTitle = reader.GetString(6);
                             // Store extra info in ViewBag
                             ViewBag.HallName = reader.GetString(7);

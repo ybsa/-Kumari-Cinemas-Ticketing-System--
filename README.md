@@ -1,6 +1,6 @@
 # Kumari Cinemas Ticketing System 🎬
 
-A premium, production-ready movie ticketing web application built with **ASP.NET Core** and **Oracle Database**.
+A premium, production-ready movie ticketing web application built with **ASP.NET Core** and **SQLite**.
 
 ## ✨ Features
 
@@ -22,7 +22,7 @@ A premium, production-ready movie ticketing web application built with **ASP.NET
 
 - **Technical Highlights**
   - **Architecture**: MVC Pattern with Service Layer.
-  - **Database**: 3NF Normalized Oracle Schema.
+  - **Database**: SQLite (Self-contained, Zero-config).
   - **Security**: CSRF Protection, SQL Injection Prevention, Secure Cookies.
   - **UI/UX**: Modern Dark Theme, Glassmorphism, Responsive Design.
 
@@ -32,45 +32,18 @@ A premium, production-ready movie ticketing web application built with **ASP.NET
 
 ### Prerequisites
 
-1. **Oracle Database XE 21c** (or compatible) running locally.
-2. **.NET 6.0 SDK** (or later).
+1. **.NET 6.0 SDK** (or later).
 
-### 1. Database Setup
+### 1. Run the Application
 
-A single script is provided to set up the entire database (Schema + Test Data).
-
-#### Option A: Using PowerShell (Recommended)
-
-This script will prompt you for your `SYSTEM` password securely.
-
-```powershell
-cd Database
-.\SetupDatabase.ps1
-```
-
-#### Option B: Manual Setup (SQL Developer)
-
-1. Open **Oracle SQL Developer**.
-2. Connect to your database (User: `SYSTEM`, using your configured password).
-3. Open `Database/setup_database.sql`.
-4. Run the script (F5).
-
-### 2. Configure Application Credentials
-
-> [!IMPORTANT]
-> You must configure your database password before running the app.
-
-1. Open `KumariCinemas.Web/appsettings.json`.
-2. Replace `[YOUR_PASSWORD]` with your actual Oracle `SYSTEM` password.
-
-### 3. Run the Application
+The application automatically creates and seeds the local SQLite database on first run.
 
 ```bash
 cd KumariCinemas.Web
 dotnet run
 ```
 
-Open your browser to: `https://localhost:7198` (or the URL shown in terminal).
+Open your browser to: `http://localhost:5000` (or the URL shown in terminal).
 
 ---
 
@@ -96,8 +69,8 @@ You can register a new account, or use:
   - `Controllers/`: Standard MVC Controllers.
   - `Views/`: Razor Views with CSS/JS.
   - `wwwroot/`: Static assets (CSS, JS, Images).
-- `Database`: DB Scripts.
-  - `setup_database.sql`: The master script.
+  - `Data/`: Database Context and Initializer.
+  - `KumariCinemas.db`: Local SQLite database file (created on runtime).
 
 ---
 

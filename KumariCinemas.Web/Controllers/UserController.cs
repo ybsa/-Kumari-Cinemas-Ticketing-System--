@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using KumariCinemas.Web.Models;
-using Oracle.ManagedDataAccess.Client;
+using Microsoft.Data.Sqlite;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -40,25 +40,26 @@ namespace KumariCinemas.Web.Controllers
 
             try
             {
-                string connectionString = _configuration.GetConnectionString("OracleDb");
-                using (var connection = new OracleConnection(connectionString))
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                using (var connection = new SqliteConnection(connectionString))
                 {
                     await connection.OpenAsync();
                     
                     // Hash the password before storing
                     string passwordHash = Services.PasswordHelper.HashPassword(password);
 
-                    string sql = "INSERT INTO M_Users (Username, Password, Address) VALUES (:u, :p, :a)";
-                    using (var cmd = new OracleCommand(sql, connection))
+                    string sql = "INSERT INTO M_Users (Username, Password, Address) VALUES (@u, @p, @a)";
+                    using (var cmd = connection.CreateCommand())
                     {
-                        cmd.Parameters.Add("u", username);
-                        cmd.Parameters.Add("p", passwordHash); // Storing the hash
-                        cmd.Parameters.Add("a", address);
+                        cmd.CommandText = sql;
+                        cmd.Parameters.AddWithValue("@u", username);
+                        cmd.Parameters.AddWithValue("@p", passwordHash); // Storing the hash
+                        cmd.Parameters.AddWithValue("@a", address ?? (object)DBNull.Value);
                         try 
                         {
                             await cmd.ExecuteNonQueryAsync();
                         }
-                        catch (OracleException ex) when (ex.Number == 1) // Unique constraint violation
+                        catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // Constraint violation
                         {
                             ViewBag.Error = "Username already exists.";
                             return View();
@@ -66,7 +67,7 @@ namespace KumariCinemas.Web.Controllers
                     }
                 }
             }
-            catch (OracleException ex)
+            catch (SqliteException ex)
             {
                 _logger.LogError(ex, "Database error during registration for user: {Username}", username);
                 ViewBag.Error = "An error occurred during registration. Please try again.";
@@ -98,15 +99,16 @@ namespace KumariCinemas.Web.Controllers
 
             try
             {
-                string connectionString = _configuration.GetConnectionString("OracleDb");
-                using (var connection = new OracleConnection(connectionString))
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                using (var connection = new SqliteConnection(connectionString))
                 {
                     await connection.OpenAsync();
-                    string sql = "SELECT UserId, Password FROM M_Users WHERE Username = :u"; 
+                    string sql = "SELECT UserId, Password FROM M_Users WHERE Username = @u"; 
                     
-                    using (var command = new OracleCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
                     {
-                        command.Parameters.Add("u", username);
+                        command.CommandText = sql;
+                        command.Parameters.AddWithValue("@u", username);
                         
                         using (var reader = await command.ExecuteReaderAsync())
                         {

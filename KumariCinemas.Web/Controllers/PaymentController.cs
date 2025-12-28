@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Oracle.ManagedDataAccess.Client;
+using Microsoft.Data.Sqlite;
 
 namespace KumariCinemas.Web.Controllers
 {
@@ -23,8 +23,8 @@ namespace KumariCinemas.Web.Controllers
             if (userIdClaim == null) return RedirectToAction("Login", "User");
             int userId = int.Parse(userIdClaim.Value);
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
                 string sql = @"
@@ -32,12 +32,13 @@ namespace KumariCinemas.Web.Controllers
                     FROM T_Bookings b
                     JOIN M_Shows s ON b.ShowId = s.ShowId
                     JOIN M_Movies m ON s.MovieId = m.MovieId
-                    WHERE b.BookingId = :bookingId AND b.UserId = :userId";
+                    WHERE b.BookingId = @bookingId AND b.UserId = @userId";
 
-                using (var cmd = new OracleCommand(sql, connection))
+                using (var cmd = connection.CreateCommand())
                 {
-                    cmd.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = bookingId });
-                    cmd.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
+                    cmd.CommandText = sql;
+                    cmd.Parameters.AddWithValue("@bookingId", bookingId);
+                    cmd.Parameters.AddWithValue("@userId", userId);
                     
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -54,7 +55,7 @@ namespace KumariCinemas.Web.Controllers
                             ViewBag.BookingId = reader.GetInt32(0);
                             ViewBag.Amount = reader.GetDecimal(1);
                             ViewBag.MovieTitle = reader.GetString(3);
-                            ViewBag.ShowDateTime = reader.GetDateTime(4);
+                            ViewBag.ShowDateTime = DateTime.Parse(reader.GetString(4));
                             
                             return View();
                         }
@@ -90,17 +91,18 @@ namespace KumariCinemas.Web.Controllers
                 return RedirectToAction("Index", new { bookingId });
             }
 
-            string connectionString = _configuration.GetConnectionString("OracleDb");
-            using (var connection = new OracleConnection(connectionString))
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqliteConnection(connectionString))
             {
                 await connection.OpenAsync();
 
                 // Verify booking belongs to user and is in BOOKED status
-                string checkSql = "SELECT Status FROM T_Bookings WHERE BookingId = :bookingId AND UserId = :userId";
-                using (var checkCmd = new OracleCommand(checkSql, connection))
+                string checkSql = "SELECT Status FROM T_Bookings WHERE BookingId = @bookingId AND UserId = @userId";
+                using (var checkCmd = connection.CreateCommand())
                 {
-                    checkCmd.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = bookingId });
-                    checkCmd.Parameters.Add(new OracleParameter("userId", OracleDbType.Int32) { Value = userId });
+                    checkCmd.CommandText = checkSql;
+                    checkCmd.Parameters.AddWithValue("@bookingId", bookingId);
+                    checkCmd.Parameters.AddWithValue("@userId", userId);
                     
                     var status = await checkCmd.ExecuteScalarAsync();
                     if (status == null)
@@ -127,10 +129,11 @@ namespace KumariCinemas.Web.Controllers
                 await Task.Delay(1000); // Simulate API call
 
                 // Update booking status to PAID
-                string updateSql = "UPDATE T_Bookings SET Status = 'PAID' WHERE BookingId = :bookingId";
-                using (var updateCmd = new OracleCommand(updateSql, connection))
+                string updateSql = "UPDATE T_Bookings SET Status = 'PAID' WHERE BookingId = @bookingId";
+                using (var updateCmd = connection.CreateCommand())
                 {
-                    updateCmd.Parameters.Add(new OracleParameter("bookingId", OracleDbType.Int32) { Value = bookingId });
+                    updateCmd.CommandText = updateSql;
+                    updateCmd.Parameters.AddWithValue("@bookingId", bookingId);
                     await updateCmd.ExecuteNonQueryAsync();
                 }
 
