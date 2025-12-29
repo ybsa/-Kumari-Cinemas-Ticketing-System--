@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace KumariCinemas.Web.Controllers
 {
-    [Authorize] // Enforce Login
+    // [Authorize] removed from class level to allow browsing
     public class TicketController : Controller
     {
         private readonly IConfiguration _configuration;
@@ -162,6 +162,7 @@ namespace KumariCinemas.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Book(int showId, int quantity, string seats = "")
         {
             // Input validation
@@ -362,6 +363,7 @@ namespace KumariCinemas.Web.Controllers
             return RedirectToAction("Index");
         }
 
+        [Authorize]
         public async Task<IActionResult> MyBookings()
         {
             // SECURE: Get UserId from Session
@@ -411,6 +413,7 @@ namespace KumariCinemas.Web.Controllers
         // POST: Cancel a booking
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> CancelBooking(int bookingId)
         {
             var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
@@ -483,6 +486,7 @@ namespace KumariCinemas.Web.Controllers
             return RedirectToAction("MyBookings");
         }
 
+        [Authorize]
         public async Task<IActionResult> BookingConfirmation(int id)
         {
             var booking = new Booking();

@@ -31,6 +31,13 @@
             @TempData["Error"]
         </div>
     }
+    
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
 
     <div class="shows-grid">
         @foreach (var show in Model)
@@ -77,20 +84,31 @@
                 </form>
 
                 <div class="review-section">
-                    <h4>Rate this Movie</h4>
-                    <form asp-controller="Review" asp-action="Add" method="post">
-                        <input type="hidden" name="movieId" value="@show.MovieId" />
-                        @* UserId Injection Removed *@
-                        <select name="rating" class="form-control" style="margin-bottom: 5px;">
-                            <option value="5">★★★★★ (5/5)</option>
-                            <option value="4">★★★★☆ (4/5)</option>
-                            <option value="3">★★★☆☆ (3/5)</option>
-                            <option value="2">★★☆☆☆ (2/5)</option>
-                            <option value="1">★☆☆☆☆ (1/5)</option>
-                        </select>
-                        <textarea name="comment" class="form-control" placeholder="Write a review..." rows="2"></textarea>
-                        <button type="submit" class="btn-review">Submit Review</button>
-                    </form>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <h4>Rate this Movie</h4>
+                        <form asp-controller="Review" asp-action="Add" method="post" class="review-form">
+                            <input type="hidden" name="movieId" value="@show.MovieId" />
+                            
+                            <div class="star-rating">
+                                <input type="radio" id="star5-@show.ShowId" name="rating" value="5" /><label for="star5-@show.ShowId" title="5 stars">★</label>
+                                <input type="radio" id="star4-@show.ShowId" name="rating" value="4" /><label for="star4-@show.ShowId" title="4 stars">★</label>
+                                <input type="radio" id="star3-@show.ShowId" name="rating" value="3" /><label for="star3-@show.ShowId" title="3 stars">★</label>
+                                <input type="radio" id="star2-@show.ShowId" name="rating" value="2" /><label for="star2-@show.ShowId" title="2 stars">★</label>
+                                <input type="radio" id="star1-@show.ShowId" name="rating" value="1" /><label for="star1-@show.ShowId" title="1 star">★</label>
+                            </div>
+                            
+                            <textarea name="comment" class="form-control" placeholder="Share your thoughts..." rows="2" style="resize: none;"></textarea>
+                            <button type="submit" class="btn-review">Submit Review</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div style="text-align: center; padding: 10px;">
+                            <p style="color: #888; font-size: 0.9rem; margin-bottom: 5px;">Want to review?</p>
+                            <a href="/User/Login" style="color: var(--primary); text-decoration: none; font-weight: 600;">Login to Rate</a>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -559,6 +577,50 @@
 
     .btn-primary:hover {
         opacity: 0.9;
+    }
+
+    /* Star Rating Styles */
+    .star-rating {
+        direction: rtl;
+        display: inline-flex;
+        margin-bottom: 10px;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .star-rating input {
+        display: none;
+    }
+    
+    .star-rating label {
+        color: #444;
+        font-size: 1.5rem;
+        padding: 0 2px;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+        color: #f1c40f;
+    }
+    
+    .review-form textarea {
+        background: rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+    }
+
+    .alert-success {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+        border: 1px solid #2ecc71;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        text-align: center;
     }
 </style>
 

@@ -9,8 +9,17 @@
 <body>
     <div class="container">
         <nav>
-            <div class="logo">Kumari Cinemas</div>
+            <div style="display: flex; align-items: center;">
+                <a href="#" onclick="event.preventDefault(); window.history.back();" style="color: white; text-decoration: none; margin-right: 15px; font-size: 1.2rem; cursor: pointer;" title="Go Back">
+                    &larr; Back
+                </a>
+                <div class="logo">
+                    <a href="/" style="text-decoration: none; color: inherit;">Kumari Cinemas</a>
+                </div>
+            </div>
             <div>
+                <a href="/Ticket" style="color: white; margin-right: 15px;">Movies</a>
+                
                 @if (User.Identity.IsAuthenticated)
                 {
                     <span style="margin-right: 15px;">Hello, @User.Identity.Name</span>

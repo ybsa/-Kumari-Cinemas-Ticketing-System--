@@ -44,6 +44,7 @@ namespace KumariCinemas.Web.Controllers
                 }
             }
 
+            TempData["Success"] = "Thanks for your review! 🌟";
             return RedirectToAction("Index", "Ticket"); 
         }
     }
